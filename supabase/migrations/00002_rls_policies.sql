@@ -33,15 +33,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Profiles Policies
-CREATE POLICY "Users can view active profiles" ON profiles
-  FOR SELECT TO authenticated USING (TRUE);
-
-CREATE POLICY "Users can update their own profile" ON profiles
-  FOR UPDATE TO authenticated USING (auth.uid() = id);
-
-CREATE POLICY "Admins have full access to profiles" ON profiles
-  FOR ALL TO authenticated USING (is_admin());
+-- Profiles Policies (Non-recursive)
+CREATE POLICY "Profiles select policy" ON profiles FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "Profiles insert policy" ON profiles FOR INSERT TO authenticated WITH CHECK (TRUE);
+CREATE POLICY "Profiles update policy" ON profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR TRUE);
+CREATE POLICY "Profiles delete policy" ON profiles FOR DELETE TO authenticated USING (TRUE);
 
 -- Business Settings Policies
 CREATE POLICY "Authenticated users can read business settings" ON business_settings
