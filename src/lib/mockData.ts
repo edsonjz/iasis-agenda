@@ -1,4 +1,17 @@
-import { BusinessSettings, ServiceCategory, Service, Professional, Client, Appointment, NotificationTemplate, FinancialTransaction } from '@/types';
+import {
+  BusinessSettings,
+  ServiceCategory,
+  Service,
+  Professional,
+  Client,
+  Appointment,
+  NotificationTemplate,
+  AnamnesisTemplate,
+  AnamnesisRecord,
+  TreatmentEvolution,
+  TreatmentPhoto,
+  Product,
+} from '@/types';
 import { format, addDays, subDays } from 'date-fns';
 
 const today = new Date();
@@ -204,4 +217,214 @@ export const initialTemplates: NotificationTemplate[] = [
     content: 'Olá, {{cliente}}, estamos com saudades de você aqui no espaço IASIS! ✨\n\nFaz um tempinho desde seu último procedimento de {{servico}}. Que tal renovar seus cuidados esta semana? Temos horários especiais disponíveis para você!',
     is_default: true,
   },
+];
+
+// =========================================================
+// 4 MODELOS DE ANAMNESE PRÉ-CONFIGURADOS
+// =========================================================
+export const initialAnamnesisTemplates: AnamnesisTemplate[] = [
+  {
+    id: 't-cilios',
+    title: 'Ficha de Extensão de Cílios',
+    description: 'Avaliação oftalmológica e estética para aplicação e manutenção de fios.',
+    category: 'cilios',
+    requires_signature: true,
+    active: true,
+    terms_text: 'Declaro que as informações acima são verdadeiras e estou ciente dos cuidados pós-procedimento (não molhar nas primeiras 24h, não usar máscara à base de óleo, higienizar diariamente).',
+    created_at: '2026-01-01T00:00:00Z',
+    fields: [
+      { id: 'f_c1', type: 'single_choice', label: 'Usa lentes de contato?', required: true, options: ['Não', 'Sim (removidas para o atendimento)', 'Sim (com lentes)'] },
+      { id: 'f_c2', type: 'single_choice', label: 'Já teve reação alérgica a adesivo/cola ou cianoacrilato?', required: true, options: ['Não', 'Sim', 'Não sei informar'] },
+      { id: 'f_c3', type: 'checkbox', label: 'Possui sensibilidade ou lacrimejamento excessivo nos olhos?', required: false },
+      { id: 'f_c4', type: 'single_choice', label: 'Costuma dormir de bruços ou de lado?', required: false, options: ['De costas', 'De lado', 'De bruços'] },
+      { id: 'f_c5', type: 'single_choice', label: 'Efeito / Mapping Desejado', required: true, options: ['Volume Brasileiro (Y)', 'Volume Russo', 'Clássico Fio a Fio', 'Efeito Fox Eyes', 'Efeito Boneca'] },
+      { id: 'f_c6', type: 'short_text', label: 'Curvatura e Espessura Utilizada', placeholder: 'Ex: Curvatura D, Espessura 0.07, Tamanhos 8 ao 13mm', required: false },
+      { id: 'f_c7', type: 'long_text', label: 'Observações de Saúde Ocular', placeholder: 'Histórico de conjuntivite, blefarite, cirurgia ocular recente...', required: false },
+    ],
+  },
+  {
+    id: 't-labios',
+    title: 'Ficha de Micropigmentação de Lábios',
+    description: 'Análise labial, histórico de herpes, tom natural e técnica de revitalização/efeito batom.',
+    category: 'labios',
+    requires_signature: true,
+    active: true,
+    terms_text: 'Autorizo a realização da micropigmentação labial e compreendo o processo de cicatrização (clareamento de até 50% nos primeiros 30 dias e necessidade de retoque se aplicável).',
+    created_at: '2026-01-01T00:00:00Z',
+    fields: [
+      { id: 'f_l1', type: 'single_choice', label: 'Histórico de Herpes Labial?', required: true, options: ['Nunca tive', 'Já tive episódios no passado', 'Frequentemente'] },
+      { id: 'f_l2', type: 'single_choice', label: 'Já realizou preenchimento com ácido hialurônico nos lábios?', required: true, options: ['Não', 'Sim (há menos de 3 meses)', 'Sim (há mais de 3 meses)'] },
+      { id: 'f_l3', type: 'single_choice', label: 'Tom natural dos lábios', required: true, options: ['Pálido/Claro', 'Rosado', 'Arroxeado/Escuro (Necessita Neutralização)', 'Manchado'] },
+      { id: 'f_l4', type: 'single_choice', label: 'Técnica Escolhida', required: true, options: ['Hydra Gloss Lips', 'Revitalização Labial / Aquarela', 'Efeito Batom (Full Lips)', 'Neutralização Labial'] },
+      { id: 'f_l5', type: 'short_text', label: 'Pigmento / Mistura de Cores Escolhida', placeholder: 'Ex: RB Kollors Red Rose + Pitanga', required: false },
+      { id: 'f_l6', type: 'checkbox', label: 'Está ciente da recomendação de profilaxia antiviral caso tenha histórico de herpes?', required: true },
+      { id: 'f_l7', type: 'long_text', label: 'Alergias a Anestésicos Tópicos ou Cosméticos', placeholder: 'Ex: Lidocaína, Epinefrina, etc.', required: false },
+    ],
+  },
+  {
+    id: 't-sobrancelhas',
+    title: 'Ficha de Micropigmentação de Sobrancelhas',
+    description: 'Análise de visagismo, tipo de pele, uso de ácidos e técnica Microblading/Shadow.',
+    category: 'sobrancelhas',
+    requires_signature: true,
+    active: true,
+    terms_text: 'Aprovo o desenho e a cor definidos em conjunto com a profissional e declaro que não omiti nenhuma condição de saúde.',
+    created_at: '2026-01-01T00:00:00Z',
+    fields: [
+      { id: 'f_s1', type: 'single_choice', label: 'Tipo de Pele na região das sobrancelhas', required: true, options: ['Normal', 'Seca', 'Mista', 'Muito Oleosa'] },
+      { id: 'f_s2', type: 'single_choice', label: 'Tendência a Queloides ou Cicatrização Hipertrófica?', required: true, options: ['Não', 'Sim', 'Não sei'] },
+      { id: 'f_s3', type: 'checkbox', label: 'Está em uso de ácidos faciais, peeling químico ou Roacutan?', required: true },
+      { id: 'f_s4', type: 'single_choice', label: 'Técnica de Sobrancelhas', required: true, options: ['Microblading Fio a Fio', 'Shadow Line / Ombré', 'Híbrida (Fios + Shadow)', 'Nanoblading'] },
+      { id: 'f_s5', type: 'short_text', label: 'Pigmento e Lâmina Utilizada', placeholder: 'Ex: Lâmina 18U Flex, Pigmento Castanho Médio', required: false },
+      { id: 'f_s6', type: 'single_choice', label: 'Procedimento Anterior na região?', required: true, options: ['Nunca fez', 'Fez micropigmentação antiga (desbotada)', 'Possui pigmento residual avermelhado/acinzentado'] },
+      { id: 'f_s7', type: 'long_text', label: 'Medicamentos de uso contínuo (Anticoagulantes, etc.)', placeholder: 'Ex: AAS, anticoagulantes, anti-inflamatórios...', required: false },
+    ],
+  },
+  {
+    id: 't-remocao',
+    title: 'Ficha de Remoção de Tatuagem / Micropigmentação',
+    description: 'Protocolo de despigmentação a laser / químico, fototipo cutâneo e histórico.',
+    category: 'remocao',
+    requires_signature: true,
+    active: true,
+    terms_text: 'Compreendo que a remoção é um tratamento progressivo que requer múltiplas sessões com intervalo mínimo de 30 a 45 dias para cicatrização completa.',
+    created_at: '2026-01-01T00:00:00Z',
+    fields: [
+      { id: 'f_r1', type: 'single_choice', label: 'Fototipo de Pele (Escala Fitzpatrick)', required: true, options: ['Fototipo I (Muito Clara)', 'Fototipo II (Clara)', 'Fototipo III (Morena Clara)', 'Fototipo IV (Morena Moderada)', 'Fototipo V (Morena Escura)', 'Fototipo VI (Negra)'] },
+      { id: 'f_r2', type: 'single_choice', label: 'Tipo de Remoção', required: true, options: ['Remoção de Tatuagem Corporal', 'Despigmentação de Sobrancelhas Antigas', 'Remoção de Micropigmentação Labial'] },
+      { id: 'f_r3', type: 'short_text', label: 'Tempo aproximado do desenho na pele', placeholder: 'Ex: Feito há 3 anos', required: true },
+      { id: 'f_r4', type: 'single_choice', label: 'Cores predominantes do pigmento', required: true, options: ['Preto / Azul Escuro Puro', 'Colorido (Vermelho/Amarelo)', 'Mistura de Pigmentos com Dióxido de Titânio'] },
+      { id: 'f_r5', type: 'scale', label: 'Sensibilidade à Dor (1 a 5)', min: 1, max: 5, required: false },
+      { id: 'f_r6', type: 'checkbox', label: 'Está ciente da proibição de exposição solar durante todo o ciclo do tratamento?', required: true },
+      { id: 'f_r7', type: 'long_text', label: 'Reações ou sensibilidades dermatológicas prévias', placeholder: 'Dermatite, psoríase, alergia a pomadas...', required: false },
+    ],
+  },
+];
+
+// Fichas preenchidas de exemplo
+export const initialAnamnesisRecords: AnamnesisRecord[] = [
+  {
+    id: 'rec-1',
+    client_id: 'u1',
+    template_id: 't-cilios',
+    template_title: 'Ficha de Extensão de Cílios',
+    fields_snapshot: initialAnamnesisTemplates[0].fields,
+    answers: {
+      f_c1: 'Não',
+      f_c2: 'Não',
+      f_c3: false,
+      f_c4: 'De lado',
+      f_c5: 'Volume Brasileiro (Y)',
+      f_c6: 'Curvatura D, 0.07, 8 ao 12mm',
+      f_c7: 'Sem queixas oculares.',
+    },
+    signed_at: '2026-08-15T10:30:00Z',
+    notes: 'Cliente tolerou muito bem a aplicação.',
+    created_at: '2026-08-15T10:30:00Z',
+  },
+  {
+    id: 'rec-2',
+    client_id: 'u4',
+    template_id: 't-labios',
+    template_title: 'Ficha de Micropigmentação de Lábios',
+    fields_snapshot: initialAnamnesisTemplates[1].fields,
+    answers: {
+      f_l1: 'Nunca tive',
+      f_l2: 'Não',
+      f_l3: 'Pálido/Claro',
+      f_l4: 'Hydra Gloss Lips',
+      f_l5: 'Sérum Ácido Hialurônico + Pigmento Coral Peach',
+      f_l6: true,
+      f_l7: 'Nenhuma alergia.',
+    },
+    signed_at: '2026-07-20T14:00:00Z',
+    notes: 'Realizado Hydra Gloss para hidratação intensiva.',
+    created_at: '2026-07-20T14:00:00Z',
+  }
+];
+
+// Produtos em Estoque
+export const initialProducts: Product[] = [
+  { id: 'prd-1', name: 'Adesivo / Cola Master Elite', category: 'Cílios', brand: 'Master', cost_price: 120.00, stock_quantity: 4, min_stock_alert: 2, unit: 'un', expiration_date: '2027-02-28', batch_number: 'ME-8842', active: true, created_at: '2026-01-10T10:00:00Z' },
+  { id: 'prd-2', name: 'Fios Volume Brasileiro Nagaraku Y (Mix)', category: 'Cílios', brand: 'Nagaraku', cost_price: 38.00, stock_quantity: 12, min_stock_alert: 4, unit: 'un', active: true, created_at: '2026-01-10T10:00:00Z' },
+  { id: 'prd-3', name: 'Pigmento Red Rose RB Kollors', category: 'Micropigmentação', brand: 'RB Kollors', cost_price: 155.00, stock_quantity: 3, min_stock_alert: 1, unit: 'un', expiration_date: '2027-08-15', batch_number: 'RB-9912', active: true, created_at: '2026-01-10T10:00:00Z' },
+  { id: 'prd-4', name: 'Pigmento Total Black RB Kollors', category: 'Micropigmentação', brand: 'RB Kollors', cost_price: 155.00, stock_quantity: 2, min_stock_alert: 1, unit: 'un', expiration_date: '2027-09-30', batch_number: 'RB-9944', active: true, created_at: '2026-01-10T10:00:00Z' },
+  { id: 'prd-5', name: 'Ácido Hialurônico Hydra Gloss 15ml', category: 'Lábios', brand: 'Dermachem', cost_price: 45.00, stock_quantity: 8, min_stock_alert: 2, unit: 'un', expiration_date: '2027-11-20', active: true, created_at: '2026-01-10T10:00:00Z' },
+  { id: 'prd-6', name: 'Henna para Sobrancelhas Castanho Médio', category: 'Sobrancelhas', brand: 'Della & Delle', cost_price: 28.00, stock_quantity: 6, min_stock_alert: 2, unit: 'un', active: true, created_at: '2026-01-10T10:00:00Z' },
+];
+
+// Evolução de Procedimentos
+export const initialEvolutions: TreatmentEvolution[] = [
+  {
+    id: 'evo-1',
+    client_id: 'u1',
+    professional_id: 'p2',
+    procedure_name: 'Extensão Volume Brasileiro',
+    session_number: 1,
+    date: yesterdayStr,
+    description: 'Aplicação completa dos fios Y, mapping fox eyes nos tamanhos 8 a 12mm. Isolamento perfeito dos fios naturais.',
+    products_used: ['Adesivo / Cola Master Elite', 'Fios Volume Brasileiro Nagaraku Y (Mix)'],
+    reaction_result: 'Excelente acoplagem, sem vermelhidão ou ardência.',
+    recommendations: 'Evitar vapor e água nas primeiras 24h. Escovar diariamente com a escovinha fornecida.',
+    next_session_date: format(addDays(today, 20), 'yyyy-MM-dd'),
+    created_at: `${yesterdayStr}T11:00:00Z`,
+  },
+  {
+    id: 'evo-2',
+    client_id: 'u4',
+    professional_id: 'p1',
+    procedure_name: 'Hydra Gloss Lips',
+    session_number: 2,
+    date: subDays(today, 10).toISOString().split('T')[0],
+    description: 'Esfoliação suave labial, infusão de ácido hialurônico através de microagulhamento estético e pigmento translúcido.',
+    products_used: ['Ácido Hialurônico Hydra Gloss 15ml', 'Pigmento Red Rose RB Kollors'],
+    reaction_result: 'Lábios extremamente hidratados com discreto brilho rosado.',
+    recommendations: 'Aplicar lip balm cicatrizante com filtro solar diariamente.',
+    next_session_date: format(addDays(today, 20), 'yyyy-MM-dd'),
+    created_at: `${subDays(today, 10).toISOString().split('T')[0]}T15:00:00Z`,
+  }
+];
+
+// Fotos Antes e Depois
+export const initialPhotos: TreatmentPhoto[] = [
+  {
+    id: 'pho-1',
+    client_id: 'u1',
+    procedure_name: 'Extensão Volume Brasileiro',
+    photo_type: 'before',
+    image_url: 'https://images.unsplash.com/photo-1583001809873-a1284a51e600?auto=format&fit=crop&w=600&q=80',
+    date: yesterdayStr,
+    notes: 'Cílios naturais curtos e retos.',
+    created_at: `${yesterdayStr}T09:10:00Z`,
+  },
+  {
+    id: 'pho-2',
+    client_id: 'u1',
+    procedure_name: 'Extensão Volume Brasileiro',
+    photo_type: 'after',
+    image_url: 'https://images.unsplash.com/photo-1588515724527-074a7a56616c?auto=format&fit=crop&w=600&q=80',
+    date: yesterdayStr,
+    notes: 'Volume brasileiro finalizado com curvatura D.',
+    created_at: `${yesterdayStr}T11:15:00Z`,
+  },
+  {
+    id: 'pho-3',
+    client_id: 'u4',
+    procedure_name: 'Hydra Gloss Lips',
+    photo_type: 'before',
+    image_url: 'https://images.unsplash.com/photo-1588515724527-074a7a56616c?auto=format&fit=crop&w=600&q=80',
+    date: subDays(today, 10).toISOString().split('T')[0],
+    notes: 'Lábios ressecados.',
+    created_at: `${subDays(today, 10).toISOString().split('T')[0]}T14:00:00Z`,
+  },
+  {
+    id: 'pho-4',
+    client_id: 'u4',
+    procedure_name: 'Hydra Gloss Lips',
+    photo_type: 'after',
+    image_url: 'https://images.unsplash.com/photo-1583001809873-a1284a51e600?auto=format&fit=crop&w=600&q=80',
+    date: subDays(today, 10).toISOString().split('T')[0],
+    notes: 'Lábios volumosos e revitalizados.',
+    created_at: `${subDays(today, 10).toISOString().split('T')[0]}T15:00:00Z`,
+  }
 ];

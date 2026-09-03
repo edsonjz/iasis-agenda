@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Modal } from '../common/Modal';
-import { UserCheck, Sparkles, MessageSquare, Settings, LogOut, X } from 'lucide-react';
+import { UserCheck, Sparkles, MessageSquare, Settings, LogOut, FileText, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface MobileMenuDrawerProps {
@@ -13,6 +13,8 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ isOpen, onCl
   const { logout, profile } = useAuth();
 
   const links = [
+    { name: 'Fichas de Anamnese', to: '/anamnese', icon: FileText },
+    { name: 'Produtos & Estoque', to: '/produtos', icon: Package },
     { name: 'Profissionais & Equipe', to: '/profissionais', icon: UserCheck },
     { name: 'Serviços & Procedimentos', to: '/servicos', icon: Sparkles },
     { name: 'Lembretes & Mensagens', to: '/lembretes', icon: MessageSquare },

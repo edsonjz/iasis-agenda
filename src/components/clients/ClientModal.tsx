@@ -15,7 +15,7 @@ interface ClientModalProps {
 }
 
 export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, client }) => {
-  const { saveClient, professionals } = useBusiness();
+  const { saveClient, deleteClient, professionals } = useBusiness();
   const { success, error: toastError } = useToast();
 
   const [name, setName] = useState('');
@@ -124,6 +124,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, clien
       toastError('Erro ao salvar cliente. Tente novamente.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!client) return;
+    if (confirm(`Tem certeza que deseja excluir o cadastro da cliente "${client.name}"?`)) {
+      await deleteClient(client.id);
+      success('Cliente excluída com sucesso');
+      onClose();
     }
   };
 
@@ -275,13 +284,26 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, clien
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button type="submit" size="sm" loading={isSubmitting}>
-            {client ? 'Salvar Alterações' : 'Cadastrar Cliente'}
-          </Button>
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+          {client ? (
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={handleDelete}
+            >
+              Excluir Cliente
+            </Button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" size="sm" loading={isSubmitting}>
+              {client ? 'Salvar Alterações' : 'Cadastrar Cliente'}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

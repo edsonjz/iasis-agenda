@@ -7,6 +7,11 @@ import {
   Client,
   Appointment,
   NotificationTemplate,
+  AnamnesisTemplate,
+  AnamnesisRecord,
+  TreatmentEvolution,
+  TreatmentPhoto,
+  Product,
   DashboardMetrics,
 } from '@/types';
 import { DataService } from '@/lib/storage';
@@ -20,19 +25,39 @@ interface BusinessContextType {
   clients: Client[];
   appointments: Appointment[];
   templates: NotificationTemplate[];
+  anamnesisTemplates: AnamnesisTemplate[];
+  anamnesisRecords: AnamnesisRecord[];
+  products: Product[];
+  evolutions: TreatmentEvolution[];
+  photos: TreatmentPhoto[];
   metrics: DashboardMetrics;
   loading: boolean;
   refreshData: () => Promise<void>;
   
-  // Mutations
+  // Mutations & Deletions
   saveSettings: (settings: BusinessSettings) => Promise<void>;
   saveCategory: (cat: ServiceCategory) => Promise<void>;
   saveService: (service: Service) => Promise<void>;
+  deleteService: (id: string) => Promise<void>;
   saveProfessional: (prof: Professional) => Promise<void>;
+  deleteProfessional: (id: string) => Promise<void>;
   saveClient: (client: Client) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
   saveAppointment: (app: Appointment) => Promise<void>;
   deleteAppointment: (id: string) => Promise<void>;
   saveTemplate: (tpl: NotificationTemplate) => Promise<void>;
+  
+  // Phase 3 Mutations
+  saveAnamnesisTemplate: (tpl: AnamnesisTemplate) => Promise<void>;
+  deleteAnamnesisTemplate: (id: string) => Promise<void>;
+  saveAnamnesisRecord: (rec: AnamnesisRecord) => Promise<void>;
+  deleteAnamnesisRecord: (id: string) => Promise<void>;
+  saveProduct: (prod: Product) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  saveEvolution: (evo: TreatmentEvolution) => Promise<void>;
+  deleteEvolution: (id: string) => Promise<void>;
+  savePhoto: (photo: TreatmentPhoto) => Promise<void>;
+  deletePhoto: (id: string) => Promise<void>;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
@@ -45,12 +70,30 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [clients, setClients] = useState<Client[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
+  const [anamnesisTemplates, setAnamnesisTemplates] = useState<AnamnesisTemplate[]>([]);
+  const [anamnesisRecords, setAnamnesisRecords] = useState<AnamnesisRecord[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [evolutions, setEvolutions] = useState<TreatmentEvolution[]>([]);
+  const [photos, setPhotos] = useState<TreatmentPhoto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [sett, cats, servs, profs, cls, apps, tpls] = await Promise.all([
+      const [
+        sett,
+        cats,
+        servs,
+        profs,
+        cls,
+        apps,
+        tpls,
+        anaTpls,
+        anaRecs,
+        prds,
+        evos,
+        phtos
+      ] = await Promise.all([
         DataService.getSettings(),
         DataService.getCategories(),
         DataService.getServices(),
@@ -58,6 +101,11 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         DataService.getClients(),
         DataService.getAppointments(),
         DataService.getTemplates(),
+        DataService.getAnamnesisTemplates(),
+        DataService.getAnamnesisRecords(),
+        DataService.getProducts(),
+        DataService.getEvolutions(),
+        DataService.getPhotos(),
       ]);
 
       setSettings(sett);
@@ -67,6 +115,11 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setClients(cls);
       setAppointments(apps);
       setTemplates(tpls);
+      setAnamnesisTemplates(anaTpls);
+      setAnamnesisRecords(anaRecs);
+      setProducts(prds);
+      setEvolutions(evos);
+      setPhotos(phtos);
     } catch (err) {
       console.error('Error loading business data:', err);
     } finally {
@@ -78,7 +131,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     loadAll();
   }, [loadAll]);
 
-  // Mutations
+  // Settings & Category
   const handleSaveSettings = async (newSettings: BusinessSettings) => {
     const res = await DataService.saveSettings(newSettings);
     setSettings(res);
@@ -97,6 +150,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  // Services
   const handleSaveService = async (service: Service) => {
     const res = await DataService.saveService(service);
     setServices(prev => {
@@ -110,6 +164,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  const handleDeleteService = async (id: string) => {
+    await DataService.deleteService(id);
+    setServices(prev => prev.filter(s => s.id !== id));
+  };
+
+  // Professionals
   const handleSaveProfessional = async (prof: Professional) => {
     const res = await DataService.saveProfessional(prof);
     setProfessionals(prev => {
@@ -123,6 +183,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  const handleDeleteProfessional = async (id: string) => {
+    await DataService.deleteProfessional(id);
+    setProfessionals(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Clients
   const handleSaveClient = async (client: Client) => {
     const res = await DataService.saveClient(client);
     setClients(prev => {
@@ -136,8 +202,13 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  const handleDeleteClient = async (id: string) => {
+    await DataService.deleteClient(id);
+    setClients(prev => prev.filter(c => c.id !== id));
+  };
+
+  // Appointments
   const handleSaveAppointment = async (app: Appointment) => {
-    // Populate client/professional/service relations locally if needed
     const enriched: Appointment = {
       ...app,
       client: clients.find(c => c.id === app.client_id) || app.client,
@@ -155,20 +226,6 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       return [...prev, enriched];
     });
-
-    // Update client stats if appointment is completed
-    if (app.status === 'completed' && app.client_id) {
-      const targetClient = clients.find(c => c.id === app.client_id);
-      if (targetClient) {
-        const updatedCl: Client = {
-          ...targetClient,
-          total_appointments: (targetClient.total_appointments || 0) + 1,
-          total_spent: (targetClient.total_spent || 0) + (app.final_price || 0),
-          last_appointment_date: app.start_time.split('T')[0],
-        };
-        handleSaveClient(updatedCl);
-      }
-    }
   };
 
   const handleDeleteAppointment = async (id: string) => {
@@ -176,6 +233,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAppointments(prev => prev.filter(a => a.id !== id));
   };
 
+  // Templates
   const handleSaveTemplate = async (tpl: NotificationTemplate) => {
     const res = await DataService.saveTemplate(tpl);
     setTemplates(prev => {
@@ -187,6 +245,101 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       return [...prev, res];
     });
+  };
+
+  // Anamnesis Templates
+  const handleSaveAnamnesisTemplate = async (tpl: AnamnesisTemplate) => {
+    const res = await DataService.saveAnamnesisTemplate(tpl);
+    setAnamnesisTemplates(prev => {
+      const idx = prev.findIndex(t => t.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [...prev, res];
+    });
+  };
+
+  const handleDeleteAnamnesisTemplate = async (id: string) => {
+    await DataService.deleteAnamnesisTemplate(id);
+    setAnamnesisTemplates(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Anamnesis Records
+  const handleSaveAnamnesisRecord = async (rec: AnamnesisRecord) => {
+    const res = await DataService.saveAnamnesisRecord(rec);
+    setAnamnesisRecords(prev => {
+      const idx = prev.findIndex(r => r.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [res, ...prev];
+    });
+  };
+
+  const handleDeleteAnamnesisRecord = async (id: string) => {
+    await DataService.deleteAnamnesisRecord(id);
+    setAnamnesisRecords(prev => prev.filter(r => r.id !== id));
+  };
+
+  // Products
+  const handleSaveProduct = async (prod: Product) => {
+    const res = await DataService.saveProduct(prod);
+    setProducts(prev => {
+      const idx = prev.findIndex(p => p.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [...prev, res];
+    });
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    await DataService.deleteProduct(id);
+    setProducts(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Evolutions
+  const handleSaveEvolution = async (evo: TreatmentEvolution) => {
+    const res = await DataService.saveEvolution(evo);
+    setEvolutions(prev => {
+      const idx = prev.findIndex(e => e.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [res, ...prev];
+    });
+  };
+
+  const handleDeleteEvolution = async (id: string) => {
+    await DataService.deleteEvolution(id);
+    setEvolutions(prev => prev.filter(e => e.id !== id));
+  };
+
+  // Photos
+  const handleSavePhoto = async (photo: TreatmentPhoto) => {
+    const res = await DataService.savePhoto(photo);
+    setPhotos(prev => {
+      const idx = prev.findIndex(p => p.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [res, ...prev];
+    });
+  };
+
+  const handleDeletePhoto = async (id: string) => {
+    await DataService.deletePhoto(id);
+    setPhotos(prev => prev.filter(p => p.id !== id));
   };
 
   // Metrics calculation
@@ -222,6 +375,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return differenceInDays(today, parseISO(c.last_appointment_date)) >= inactiveCutoff;
     }).length;
 
+    // Count clients without anamnesis records
+    const clientsWithAnamnesis = new Set(anamnesisRecords.map(r => r.client_id));
+    const pendingAnamnesisCount = clients.filter(c => !clientsWithAnamnesis.has(c.id)).length;
+
     return {
       todayAppointmentsCount: todayApps.length,
       todayRevenue,
@@ -231,11 +388,11 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       newClientsThisMonth,
       averageTicket,
       noShowRate,
-      pendingAnamnesisCount: 2, // Fichas pendentes
+      pendingAnamnesisCount,
       upcomingBirthdaysCount: 3,
       inactiveClientsCount,
     };
-  }, [appointments, clients, settings]);
+  }, [appointments, clients, settings, anamnesisRecords]);
 
   return (
     <BusinessContext.Provider
@@ -247,17 +404,35 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         clients,
         appointments,
         templates,
+        anamnesisTemplates,
+        anamnesisRecords,
+        products,
+        evolutions,
+        photos,
         metrics,
         loading,
         refreshData: loadAll,
         saveSettings: handleSaveSettings,
         saveCategory: handleSaveCategory,
         saveService: handleSaveService,
+        deleteService: handleDeleteService,
         saveProfessional: handleSaveProfessional,
+        deleteProfessional: handleDeleteProfessional,
         saveClient: handleSaveClient,
+        deleteClient: handleDeleteClient,
         saveAppointment: handleSaveAppointment,
         deleteAppointment: handleDeleteAppointment,
         saveTemplate: handleSaveTemplate,
+        saveAnamnesisTemplate: handleSaveAnamnesisTemplate,
+        deleteAnamnesisTemplate: handleDeleteAnamnesisTemplate,
+        saveAnamnesisRecord: handleSaveAnamnesisRecord,
+        deleteAnamnesisRecord: handleDeleteAnamnesisRecord,
+        saveProduct: handleSaveProduct,
+        deleteProduct: handleDeleteProduct,
+        saveEvolution: handleSaveEvolution,
+        deleteEvolution: handleDeleteEvolution,
+        savePhoto: handleSavePhoto,
+        deletePhoto: handleDeletePhoto,
       }}
     >
       {children}

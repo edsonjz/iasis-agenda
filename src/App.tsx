@@ -12,6 +12,8 @@ import { Agenda } from './pages/Agenda';
 import { Clientes } from './pages/Clientes';
 import { Profissionais } from './pages/Profissionais';
 import { Servicos } from './pages/Servicos';
+import { Anamnese } from './pages/Anamnese';
+import { Produtos } from './pages/Produtos';
 import { Lembretes } from './pages/Lembretes';
 import { Configuracoes } from './pages/Configuracoes';
 import { Login } from './pages/Login';
@@ -60,6 +62,8 @@ export function App() {
                   <Route path="clientes" element={<Clientes />} />
                   <Route path="profissionais" element={<Profissionais />} />
                   <Route path="servicos" element={<Servicos />} />
+                  <Route path="anamnese" element={<Anamnese />} />
+                  <Route path="produtos" element={<Produtos />} />
                   <Route path="lembretes" element={<Lembretes />} />
                   <Route path="configuracoes" element={<Configuracoes />} />
                 </Route>

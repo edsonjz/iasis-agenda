@@ -6,6 +6,8 @@ import {
   Users,
   UserCheck,
   Sparkles,
+  FileText,
+  Package,
   MessageSquare,
   Settings,
   LogOut,
@@ -20,6 +22,8 @@ const navigationItems = [
   { name: 'Clientes', to: '/clientes', icon: Users },
   { name: 'Profissionais', to: '/profissionais', icon: UserCheck },
   { name: 'Serviços', to: '/servicos', icon: Sparkles },
+  { name: 'Fichas de Anamnese', to: '/anamnese', icon: FileText },
+  { name: 'Produtos & Estoque', to: '/produtos', icon: Package },
   { name: 'Lembretes', to: '/lembretes', icon: MessageSquare },
   { name: 'Configurações', to: '/configuracoes', icon: Settings },
 ];

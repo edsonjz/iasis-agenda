@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { Select } from '../common/Select';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Professional } from '@/types';
@@ -28,7 +27,7 @@ export const ProfessionalModal: React.FC<ProfessionalModalProps> = ({
   onClose,
   professional,
 }) => {
-  const { saveProfessional } = useBusiness();
+  const { saveProfessional, deleteProfessional } = useBusiness();
   const { success, error: toastError } = useToast();
 
   const [name, setName] = useState('');
@@ -100,6 +99,15 @@ export const ProfessionalModal: React.FC<ProfessionalModalProps> = ({
       toastError('Erro ao salvar profissional.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!professional) return;
+    if (confirm(`Deseja remover a profissional "${professional.name}"?`)) {
+      await deleteProfessional(professional.id);
+      success('Profissional removida');
+      onClose();
     }
   };
 
@@ -181,13 +189,26 @@ export const ProfessionalModal: React.FC<ProfessionalModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button type="submit" size="sm" loading={isSubmitting}>
-            Salvar Profissional
-          </Button>
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+          {professional ? (
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={handleDelete}
+            >
+              Excluir Profissional
+            </Button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" size="sm" loading={isSubmitting}>
+              Salvar Profissional
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

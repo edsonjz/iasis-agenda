@@ -14,7 +14,7 @@ interface ServiceModalProps {
 }
 
 export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, service }) => {
-  const { categories, saveService } = useBusiness();
+  const { categories, saveService, deleteService } = useBusiness();
   const { success, error: toastError } = useToast();
 
   const [name, setName] = useState('');
@@ -83,6 +83,15 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
       toastError('Erro ao salvar serviço.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!service) return;
+    if (confirm(`Deseja excluir o serviço "${service.name}"?`)) {
+      await deleteService(service.id);
+      success('Serviço excluído');
+      onClose();
     }
   };
 
@@ -180,13 +189,26 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
           </label>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button type="submit" size="sm" loading={isSubmitting}>
-            Salvar Procedimento
-          </Button>
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+          {service ? (
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={handleDelete}
+            >
+              Excluir Serviço
+            </Button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" size="sm" loading={isSubmitting}>
+              Salvar Procedimento
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>
