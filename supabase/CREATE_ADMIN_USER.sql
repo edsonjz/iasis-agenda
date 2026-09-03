@@ -1,10 +1,13 @@
 -- ==============================================================================
--- 🌸 IASIS AGENDA - CRIAÇÃO DO USUÁRIO ADMINISTRADOR
+-- 🌸 IASIS AGENDA - CRIAÇÃO DO USUÁRIO ADMINISTRADOR (100% COMPATÍVEL)
 -- Email: studiojaquesouza@gmail.com
 -- Senha Inicial: Agenda@2026
 -- ==============================================================================
 
--- 1. Cria ou atualiza o usuário no Supabase Auth com senha encriptada em bcrypt
+-- 1. Remove registro anterior se houver para evitar conflitos de constraint
+DELETE FROM auth.users WHERE email = 'studiojaquesouza@gmail.com';
+
+-- 2. Cria o usuário no Supabase Auth com senha encriptada em Bcrypt
 INSERT INTO auth.users (
   instance_id,
   id,
@@ -25,15 +28,13 @@ INSERT INTO auth.users (
   'studiojaquesouza@gmail.com',
   crypt('Agenda@2026', gen_salt('bf')),
   NOW(),
-  '{"provider":"email","providers":["email"]}',
-  '{"full_name":"Jaque Souza"}',
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Jaque Souza"}'::jsonb,
   NOW(),
   NOW()
-) ON CONFLICT (email) DO UPDATE
-SET encrypted_password = crypt('Agenda@2026', gen_salt('bf')),
-    email_confirmed_at = NOW();
+);
 
--- 2. Cria ou atualiza o perfil de Administradora na tabela profiles
+-- 3. Cria ou atualiza o perfil de Administradora na tabela profiles
 INSERT INTO profiles (
   id,
   role,
