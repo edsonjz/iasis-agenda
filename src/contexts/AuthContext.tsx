@@ -11,13 +11,14 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
+  changePassword: (newPassword: string) => Promise<{ error: string | null }>;
 }
 
 const defaultMockProfile: Profile = {
-  id: '00000000-0000-0000-0000-000000000001',
+  id: 'a0000000-0000-0000-0000-000000000002',
   role: 'admin',
-  full_name: 'Camila Ribeiro',
-  display_name: 'Dra. Camila',
+  full_name: 'Jaque Souza',
+  display_name: 'Jaque Souza',
   phone: '(11) 98765-4321',
   active: true,
   created_at: new Date().toISOString(),
@@ -43,7 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile({
               id: session.user.id,
               role: 'admin',
-              full_name: session.user.user_metadata?.full_name || 'Usuário Admin',
+              full_name: session.user.user_metadata?.full_name || 'Jaque Souza',
+              display_name: 'Jaque Souza',
               active: true,
               created_at: new Date().toISOString(),
             });
@@ -55,14 +57,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!session?.user) setProfile(null);
         });
       } else {
-        // Modo Local / Demo Integrado
+        // Modo Local / Demo
         const storedProfile = localStorage.getItem('iasis_mock_profile');
         if (storedProfile) {
           setProfile(JSON.parse(storedProfile));
-          setUser({ id: 'demo-user-id', email: 'admin@iasisagenda.com.br' });
+          setUser({ id: 'demo-user-id', email: 'studiojaquesouza@gmail.com' });
         } else {
           setProfile(defaultMockProfile);
-          setUser({ id: 'demo-user-id', email: 'admin@iasisagenda.com.br' });
+          setUser({ id: 'demo-user-id', email: 'studiojaquesouza@gmail.com' });
         }
       }
       setLoading(false);
@@ -74,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, _pass: string) => {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password: _pass,
       });
       if (error) return { error: error.message };
@@ -82,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null };
     } else {
       // Local demo login
-      const mock = { ...defaultMockProfile, full_name: email.split('@')[0] || 'Administrador' };
+      const mock = { ...defaultMockProfile, full_name: email.split('@')[0] || 'Jaque Souza' };
       setProfile(mock);
       setUser({ id: 'demo-user-id', email });
       localStorage.setItem('iasis_mock_profile', JSON.stringify(mock));
@@ -110,6 +112,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const changePassword = async (newPassword: string): Promise<{ error: string | null }> => {
+    // Client-side strength validation
+    if (newPassword.length < 8) {
+      return { error: 'A senha deve ter no mínimo 8 caracteres.' };
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      return { error: 'A senha deve conter ao menos uma letra maiúscula.' };
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return { error: 'A senha deve conter ao menos um número.' };
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) {
+        return { error: error.message };
+      }
+      return { error: null };
+    } else {
+      // Local storage mock simulation
+      localStorage.setItem('iasis_mock_password', newPassword);
+      return { error: null };
+    }
+  };
+
   const role: UserRole = profile?.role || 'admin';
   const isAdmin = role === 'admin';
 
@@ -124,6 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         updateProfile,
+        changePassword,
       }}
     >
       {children}

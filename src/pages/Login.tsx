@@ -12,8 +12,8 @@ export const Login: React.FC = () => {
   const { success, error: toastError } = useToast();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@iasisagenda.com.br');
-  const [password, setPassword] = useState('******');
+  const [email, setEmail] = useState('studiojaquesouza@gmail.com');
+  const [password, setPassword] = useState('Agenda@2026');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
