@@ -22,8 +22,12 @@ import {
   LoyaltyAccount,
   CommissionRecord,
   PaymentMethod,
+  CRMConfig,
+  ClientFollowUp,
+  ClientRecoveryLog,
 } from '@/types';
 import { DataService } from '@/lib/storage';
+import { defaultCRMConfig, calculateClientMetrics } from '@/lib/crmEngine';
 import { isSameDay, parseISO, isThisMonth, differenceInDays, format } from 'date-fns';
 
 interface BusinessContextType {
@@ -47,6 +51,9 @@ interface BusinessContextType {
   promotions: Promotion[];
   loyaltyAccounts: LoyaltyAccount[];
   commissions: CommissionRecord[];
+  crmConfig: CRMConfig;
+  followUps: ClientFollowUp[];
+  recoveryLogs: ClientRecoveryLog[];
   metrics: DashboardMetrics;
   loading: boolean;
   refreshData: () => Promise<void>;
@@ -102,6 +109,11 @@ interface BusinessContextType {
   // Commissions
   saveCommission: (com: CommissionRecord) => Promise<void>;
   payCommission: (id: string) => Promise<void>;
+
+  // CRM & Follow-ups
+  saveCRMConfig: (cfg: CRMConfig) => Promise<void>;
+  saveFollowUp: (flw: ClientFollowUp) => Promise<void>;
+  deleteFollowUp: (id: string) => Promise<void>;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
@@ -129,6 +141,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loyaltyAccounts, setLoyaltyAccounts] = useState<LoyaltyAccount[]>([]);
   const [commissions, setCommissions] = useState<CommissionRecord[]>([]);
+
+  // CRM & Follow-ups
+  const [crmConfig, setCRMConfig] = useState<CRMConfig>(defaultCRMConfig);
+  const [followUps, setFollowUps] = useState<ClientFollowUp[]>([]);
+  const [recoveryLogs, setRecoveryLogs] = useState<ClientRecoveryLog[]>([]);
+
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadAll = useCallback(async () => {
@@ -155,6 +173,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         prms,
         loys,
         comms,
+        crmCfg,
+        flws,
+        recLogs,
       ] = await Promise.all([
         DataService.getSettings(),
         DataService.getCategories(),
@@ -176,6 +197,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         DataService.getPromotions(),
         DataService.getLoyaltyAccounts(),
         DataService.getCommissions(),
+        DataService.getCRMConfig(),
+        DataService.getFollowUps(),
+        DataService.getRecoveryLogs(),
       ]);
 
       setSettings(sett);
@@ -198,6 +222,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setPromotions(prms);
       setLoyaltyAccounts(loys);
       setCommissions(comms);
+      setCRMConfig(crmCfg || defaultCRMConfig);
+      setFollowUps(flws);
+      setRecoveryLogs(recLogs);
     } catch (err) {
       console.error('Error loading business data:', err);
     } finally {
@@ -326,6 +353,26 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         created_at: new Date().toISOString(),
       };
       await handleSaveCommission(commRecord);
+
+      // Check if client was previously inactive (> crmConfig.inactive_days) to record recovery log
+      if (enriched.client?.last_appointment_date) {
+        const daysGap = differenceInDays(parseISO(app.start_time), parseISO(enriched.client.last_appointment_date));
+        if (daysGap >= crmConfig.inactive_days) {
+          const recovery: ClientRecoveryLog = {
+            id: `rec_${Date.now()}`,
+            client_id: enriched.client.id,
+            recovered_at: new Date().toISOString(),
+            inactive_days_count: daysGap,
+            previous_status: daysGap >= crmConfig.abandoned_days ? 'abandonou' : 'inativa',
+            procedure_name: enriched.service?.name || 'Procedimento',
+            amount: app.final_price,
+            professional_name: prof?.name || 'Profissional',
+            created_at: new Date().toISOString(),
+          };
+          const savedLog = await DataService.saveRecoveryLog(recovery);
+          setRecoveryLogs(prev => [savedLog, ...prev]);
+        }
+      }
     }
   };
 
@@ -480,7 +527,6 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const reg = cashRegisters.find(c => c.id === id);
     if (!reg) return;
 
-    // Calculate expected amount based on movements
     const movements = cashMovements.filter(m => m.cash_register_id === id);
     const cashIn = movements
       .filter(m => (m.type === 'income' || m.type === 'reforco') && m.payment_method === 'cash')
@@ -702,7 +748,31 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await handleSaveCommission(paid);
   };
 
-  // Metrics calculation
+  // CRM & Follow-ups
+  const handleSaveCRMConfig = async (cfg: CRMConfig) => {
+    const res = await DataService.saveCRMConfig(cfg);
+    setCRMConfig(res);
+  };
+
+  const handleSaveFollowUp = async (flw: ClientFollowUp) => {
+    const res = await DataService.saveFollowUp(flw);
+    setFollowUps(prev => {
+      const idx = prev.findIndex(f => f.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [res, ...prev];
+    });
+  };
+
+  const handleDeleteFollowUp = async (id: string) => {
+    await DataService.deleteFollowUp(id);
+    setFollowUps(prev => prev.filter(f => f.id !== id));
+  };
+
+  // Metrics calculation with CRM Intelligence
   const metrics: DashboardMetrics = useMemo(() => {
     const today = new Date();
     const todayApps = appointments.filter(a => isSameDay(parseISO(a.start_time), today) && a.status !== 'cancelled');
@@ -729,7 +799,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const noShowApps = appointments.filter(a => a.status === 'no_show').length;
     const noShowRate = appointments.length > 0 ? (noShowApps / appointments.length) * 100 : 0;
 
-    const inactiveCutoff = settings?.inactive_client_days || 60;
+    const inactiveCutoff = crmConfig?.inactive_days || 90;
     const inactiveClientsCount = clients.filter(c => {
       if (!c.last_appointment_date) return true;
       return differenceInDays(today, parseISO(c.last_appointment_date)) >= inactiveCutoff;
@@ -737,6 +807,16 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const clientsWithAnamnesis = new Set(anamnesisRecords.map(r => r.client_id));
     const pendingAnamnesisCount = clients.filter(c => !clientsWithAnamnesis.has(c.id)).length;
+
+    // Count clients in risk
+    const riskClientsCount = clients.filter(c => {
+      const m = calculateClientMetrics(c, appointments, crmConfig, recoveryLogs);
+      return m.category === 'em_risco';
+    }).length;
+
+    // Follow-ups scheduled for today
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const todayFollowUpsCount = followUps.filter(f => f.recommended_date === todayStr && f.status === 'pending').length;
 
     return {
       todayAppointmentsCount: todayApps.length,
@@ -750,8 +830,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       pendingAnamnesisCount,
       upcomingBirthdaysCount: 3,
       inactiveClientsCount,
+      riskClientsCount,
+      todayFollowUpsCount,
     };
-  }, [appointments, clients, settings, anamnesisRecords]);
+  }, [appointments, clients, crmConfig, anamnesisRecords, followUps, recoveryLogs]);
 
   return (
     <BusinessContext.Provider
@@ -776,6 +858,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         promotions,
         loyaltyAccounts,
         commissions,
+        crmConfig,
+        followUps,
+        recoveryLogs,
         metrics,
         loading,
         refreshData: loadAll,
@@ -817,6 +902,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         redeemLoyaltyPoints: handleRedeemLoyaltyPoints,
         saveCommission: handleSaveCommission,
         payCommission: handlePayCommission,
+        saveCRMConfig: handleSaveCRMConfig,
+        saveFollowUp: handleSaveFollowUp,
+        deleteFollowUp: handleDeleteFollowUp,
       }}
     >
       {children}

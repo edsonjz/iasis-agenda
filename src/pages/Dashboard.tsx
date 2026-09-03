@@ -26,7 +26,9 @@ import {
   FileText,
   Phone,
   MessageCircle,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle,
+  Award
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -318,30 +320,78 @@ export const Dashboard: React.FC = () => {
         {/* Right Column: Smart Alerts & Operational Cards (1 col) */}
         <div className="space-y-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-500" /> Alertas da Estética
+            <AlertCircle className="w-4 h-4 text-amber-500" /> Alertas & Retenção
           </h3>
 
           <div className="space-y-3">
+            {/* Clientes em Risco de Abandono */}
+            {(metrics.riskClientsCount ?? 0) > 0 && (
+              <Card
+                hoverable
+                onClick={() => navigate('/crm')}
+                className="p-4 bg-amber-500/10 border-amber-300 dark:border-amber-800/60 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                      {metrics.riskClientsCount} Clientes Acima do Retorno Habitual
+                    </div>
+                    <div className="text-[10px] text-amber-800/80 dark:text-amber-400">
+                      Risco de abandono detectado • Preparar Follow-up
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-amber-600" />
+              </Card>
+            )}
+
+            {/* Follow-ups de Hoje */}
+            {(metrics.todayFollowUpsCount ?? 0) > 0 && (
+              <Card
+                hoverable
+                onClick={() => navigate('/crm')}
+                className="p-4 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/80 dark:border-blue-900/40 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300">
+                    <MessageCircle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-blue-950 dark:text-blue-200">
+                      {metrics.todayFollowUpsCount} Follow-ups para Hoje
+                    </div>
+                    <div className="text-[10px] text-blue-800/80 dark:text-blue-400">
+                      Mensagens de acompanhamento pendentes
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-blue-600" />
+              </Card>
+            )}
+
             {/* Clientes sem Anamnese */}
             <Card
               hoverable
               onClick={() => navigate('/clientes')}
-              className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-900/40 flex items-center justify-between"
+              className="p-4 bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-800 flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+                <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
                     {metrics.pendingAnamnesisCount} Clientes sem Anamnese
                   </div>
-                  <div className="text-[10px] text-amber-800/80 dark:text-amber-400">
+                  <div className="text-[10px] text-slate-400">
                     Fichas pendentes de preenchimento
                   </div>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-amber-600" />
+              <ArrowRight className="w-4 h-4 text-slate-400" />
             </Card>
 
             {/* Aniversariantes */}
@@ -364,28 +414,6 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-rose-600" />
-            </Card>
-
-            {/* Clientes Inativas */}
-            <Card
-              hoverable
-              onClick={() => navigate('/lembretes')}
-              className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border-purple-200/80 dark:border-purple-900/40 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300">
-                  <UserX className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-purple-950 dark:text-purple-200">
-                    {metrics.inactiveClientsCount} Clientes Inativas (+60 dias)
-                  </div>
-                  <div className="text-[10px] text-purple-800/80 dark:text-purple-400">
-                    Campanha de recuperação pronta
-                  </div>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-purple-600" />
             </Card>
           </div>
 

@@ -20,7 +20,10 @@ import {
   initialPromotions,
   initialLoyaltyAccounts,
   initialCommissions,
+  initialFollowUps,
+  initialRecoveryLogs,
 } from './mockData';
+import { defaultCRMConfig } from './crmEngine';
 import {
   BusinessSettings,
   ServiceCategory,
@@ -41,8 +44,10 @@ import {
   ClientPackage,
   Promotion,
   LoyaltyAccount,
-  LoyaltyTransaction,
   CommissionRecord,
+  CRMConfig,
+  ClientFollowUp,
+  ClientRecoveryLog,
 } from '@/types';
 
 // Helper for Local Storage persistence keys
@@ -67,6 +72,9 @@ const STORAGE_KEYS = {
   PROMOTIONS: 'iasis_promotions',
   LOYALTY_ACCOUNTS: 'iasis_loyalty_accounts',
   COMMISSIONS: 'iasis_commissions',
+  CRM_CONFIG: 'iasis_crm_config',
+  FOLLOW_UPS: 'iasis_follow_ups',
+  RECOVERY_LOGS: 'iasis_recovery_logs',
   THEME: 'iasis_theme',
 };
 
@@ -504,9 +512,7 @@ export const DataService = {
     return true;
   },
 
-  // ==========================================
-  // FINANCIAL TRANSACTIONS
-  // ==========================================
+  // Financial Transactions
   async getTransactions(): Promise<FinancialTransaction[]> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('financial_transactions').select('*').order('paid_at', { ascending: false });
@@ -542,9 +548,7 @@ export const DataService = {
     return true;
   },
 
-  // ==========================================
-  // CASH REGISTER & MOVEMENTS
-  // ==========================================
+  // Cash Registers
   async getCashRegisters(): Promise<CashRegister[]> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('cash_registers').select('*').order('opened_at', { ascending: false });
@@ -590,9 +594,7 @@ export const DataService = {
     return cm;
   },
 
-  // ==========================================
-  // PACKAGES
-  // ==========================================
+  // Packages
   async getPackages(): Promise<Package[]> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('packages').select('*').order('name');
@@ -663,9 +665,7 @@ export const DataService = {
     return true;
   },
 
-  // ==========================================
-  // PROMOTIONS
-  // ==========================================
+  // Promotions
   async getPromotions(): Promise<Promotion[]> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('promotions').select('*').order('start_date');
@@ -701,9 +701,7 @@ export const DataService = {
     return true;
   },
 
-  // ==========================================
-  // LOYALTY
-  // ==========================================
+  // Loyalty
   async getLoyaltyAccounts(): Promise<LoyaltyAccount[]> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('loyalty_accounts').select('*');
@@ -730,9 +728,7 @@ export const DataService = {
     return acc;
   },
 
-  // ==========================================
-  // COMMISSIONS
-  // ==========================================
+  // Commissions
   async getCommissions(): Promise<CommissionRecord[]> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('commission_records').select('*').order('appointment_date', { ascending: false });
@@ -757,5 +753,79 @@ export const DataService = {
     }
     setLocal(STORAGE_KEYS.COMMISSIONS, updated);
     return com;
+  },
+
+  // ==========================================
+  // CRM CONFIG & FOLLOW-UPS
+  // ==========================================
+  async getCRMConfig(): Promise<CRMConfig> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('crm_settings').select('*').limit(1).single();
+      if (!error && data) return data;
+    }
+    return getLocal<CRMConfig>(STORAGE_KEYS.CRM_CONFIG, defaultCRMConfig);
+  },
+
+  async saveCRMConfig(cfg: CRMConfig): Promise<CRMConfig> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('crm_settings').upsert(cfg).select().single();
+      if (!error && data) return data;
+    }
+    setLocal(STORAGE_KEYS.CRM_CONFIG, cfg);
+    return cfg;
+  },
+
+  async getFollowUps(): Promise<ClientFollowUp[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('client_follow_ups').select('*').order('recommended_date');
+      if (!error && data) return data;
+    }
+    return getLocal<ClientFollowUp[]>(STORAGE_KEYS.FOLLOW_UPS, initialFollowUps);
+  },
+
+  async saveFollowUp(flw: ClientFollowUp): Promise<ClientFollowUp> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('client_follow_ups').upsert(flw).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<ClientFollowUp[]>(STORAGE_KEYS.FOLLOW_UPS, initialFollowUps);
+    const idx = list.findIndex(f => f.id === flw.id);
+    let updated: ClientFollowUp[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = flw;
+    } else {
+      updated = [flw, ...list];
+    }
+    setLocal(STORAGE_KEYS.FOLLOW_UPS, updated);
+    return flw;
+  },
+
+  async deleteFollowUp(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('client_follow_ups').delete().eq('id', id);
+    }
+    const list = getLocal<ClientFollowUp[]>(STORAGE_KEYS.FOLLOW_UPS, initialFollowUps);
+    setLocal(STORAGE_KEYS.FOLLOW_UPS, list.filter(f => f.id !== id));
+    return true;
+  },
+
+  async getRecoveryLogs(): Promise<ClientRecoveryLog[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('client_recovery_logs').select('*').order('recovered_at', { ascending: false });
+      if (!error && data) return data;
+    }
+    return getLocal<ClientRecoveryLog[]>(STORAGE_KEYS.RECOVERY_LOGS, initialRecoveryLogs);
+  },
+
+  async saveRecoveryLog(log: ClientRecoveryLog): Promise<ClientRecoveryLog> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('client_recovery_logs').upsert(log).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<ClientRecoveryLog[]>(STORAGE_KEYS.RECOVERY_LOGS, initialRecoveryLogs);
+    const updated = [log, ...list];
+    setLocal(STORAGE_KEYS.RECOVERY_LOGS, updated);
+    return log;
   },
 };

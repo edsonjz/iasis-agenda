@@ -1,6 +1,7 @@
-// Re-export anamnesis and finance types
+// Re-export anamnesis, finance and CRM types
 export * from './anamnesis';
 export * from './finance';
+export * from './crm';
 
 // =========================================================
 // IASIS AGENDA - CORE TYPES
@@ -108,6 +109,8 @@ export interface Service {
   promotional_price?: number;
   commission_rate?: number;
   requires_anamnesis: boolean;
+  recommended_return_days?: number;
+  post_procedure_followup_days?: number;
   active: boolean;
 }
 
@@ -229,4 +232,6 @@ export interface DashboardMetrics {
   pendingAnamnesisCount: number;
   upcomingBirthdaysCount: number;
   inactiveClientsCount: number;
+  riskClientsCount?: number;
+  todayFollowUpsCount?: number;
 }

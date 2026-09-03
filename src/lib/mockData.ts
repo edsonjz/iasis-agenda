@@ -18,8 +18,10 @@ import {
   ClientPackage,
   Promotion,
   LoyaltyAccount,
-  LoyaltyTransaction,
   CommissionRecord,
+  CRMConfig,
+  ClientFollowUp,
+  ClientRecoveryLog,
 } from '@/types';
 import { format, addDays, subDays } from 'date-fns';
 
@@ -66,12 +68,12 @@ export const initialCategories: ServiceCategory[] = [
 ];
 
 export const initialServices: Service[] = [
-  { id: 's1', category_id: 'c1', name: 'Extensão Volume Brasileiro', description: 'Aplicação de fios em formato Y proporcionando volume delicado e marcante.', duration_minutes: 120, buffer_minutes: 10, price: 180.00, requires_anamnesis: true, active: true },
-  { id: 's2', category_id: 'c1', name: 'Manutenção de Cílios (até 20 dias)', description: 'Reposição dos fios com higienização prévia.', duration_minutes: 90, buffer_minutes: 10, price: 110.00, requires_anamnesis: true, active: true },
-  { id: 's3', category_id: 'c2', name: 'Microblading Fio a Fio', description: 'Procedimento semipermanente para desenho natural dos fios da sobrancelha.', duration_minutes: 150, buffer_minutes: 15, price: 450.00, promotional_price: 390.00, requires_anamnesis: true, active: true },
-  { id: 's4', category_id: 'c3', name: 'Hydra Gloss Lips', description: 'Hidratação profunda e regeneração labial com ácido hialurônico.', duration_minutes: 60, buffer_minutes: 10, price: 150.00, requires_anamnesis: true, active: true },
-  { id: 's5', category_id: 'c4', name: 'Design de Sobrancelha com Henna', description: 'Alinhamento com visagismo facial e coloração com henna de alta fixação.', duration_minutes: 45, buffer_minutes: 10, price: 65.00, requires_anamnesis: false, active: true },
-  { id: 's6', category_id: 'c5', name: 'Limpeza de Pele Profunda', description: 'Higienização, vapor de ozônio, extração manual, alta frequência e máscara calmante.', duration_minutes: 90, buffer_minutes: 15, price: 160.00, requires_anamnesis: true, active: true },
+  { id: 's1', category_id: 'c1', name: 'Extensão Volume Brasileiro', description: 'Aplicação de fios em formato Y proporcionando volume delicado e marcante.', duration_minutes: 120, buffer_minutes: 10, price: 180.00, requires_anamnesis: true, recommended_return_days: 20, post_procedure_followup_days: 3, active: true },
+  { id: 's2', category_id: 'c1', name: 'Manutenção de Cílios (até 20 dias)', description: 'Reposição dos fios com higienização prévia.', duration_minutes: 90, buffer_minutes: 10, price: 110.00, requires_anamnesis: true, recommended_return_days: 20, post_procedure_followup_days: 3, active: true },
+  { id: 's3', category_id: 'c2', name: 'Microblading Fio a Fio', description: 'Procedimento semipermanente para desenho natural dos fios da sobrancelha.', duration_minutes: 150, buffer_minutes: 15, price: 450.00, promotional_price: 390.00, requires_anamnesis: true, recommended_return_days: 30, post_procedure_followup_days: 7, active: true },
+  { id: 's4', category_id: 'c3', name: 'Hydra Gloss Lips', description: 'Hidratação profunda e regeneração labial com ácido hialurônico.', duration_minutes: 60, buffer_minutes: 10, price: 150.00, requires_anamnesis: true, recommended_return_days: 30, post_procedure_followup_days: 4, active: true },
+  { id: 's5', category_id: 'c4', name: 'Design de Sobrancelha com Henna', description: 'Alinhamento com visagismo facial e coloração com henna de alta fixação.', duration_minutes: 45, buffer_minutes: 10, price: 65.00, requires_anamnesis: false, recommended_return_days: 18, post_procedure_followup_days: 2, active: true },
+  { id: 's6', category_id: 'c5', name: 'Limpeza de Pele Profunda', description: 'Higienização, vapor de ozônio, extração manual, alta frequência e máscara calmante.', duration_minutes: 90, buffer_minutes: 15, price: 160.00, requires_anamnesis: true, recommended_return_days: 35, post_procedure_followup_days: 5, active: true },
 ];
 
 export const initialProfessionals: Professional[] = [
@@ -86,6 +88,7 @@ export const initialClients: Client[] = [
   { id: 'u3', name: 'Carolina Oliveira Martins', nickname: 'Carol', phone: '(11) 96655-4433', whatsapp: '11966554433', email: 'carol.martins@outlook.com', birth_date: '2001-09-08', how_did_you_find_us: 'Google', allow_contact: true, tags: ['Nova cliente'], notes: 'Primeira experiência com extensões de cílios.', total_appointments: 1, total_spent: 180.00, active: true, created_at: '2026-08-20T14:00:00Z', last_appointment_date: todayStr },
   { id: 'u4', name: 'Patricia Guimarães', nickname: 'Paty', phone: '(11) 95544-3322', whatsapp: '11955443322', email: 'paty.guimaraes@yahoo.com.br', birth_date: '1982-03-30', how_did_you_find_us: 'Instagram', allow_contact: true, tags: ['VIP', 'Lábios'], notes: 'Ama Hydra Gloss e faz manutenção mensal pontualmente.', total_appointments: 8, total_spent: 1420.00, active: true, created_at: '2025-11-05T09:00:00Z', last_appointment_date: tomorrowStr },
   { id: 'u5', name: 'Juliana Moreira Neves', nickname: 'Ju', phone: '(11) 94433-2211', whatsapp: '11944332211', email: 'ju.neves@uol.com.br', birth_date: '1990-12-19', how_did_you_find_us: 'Passou em frente', allow_contact: true, tags: ['Inativa'], notes: 'Cliente sem retorno há mais de 70 dias.', total_appointments: 2, total_spent: 220.00, active: true, created_at: '2025-09-12T16:00:00Z', last_appointment_date: '2026-05-10' },
+  { id: 'u6', name: 'Renata Albuquerque', nickname: 'Rê', phone: '(11) 93322-1100', whatsapp: '11933221100', email: 'renata@empresa.com.br', birth_date: '1986-07-22', how_did_you_find_us: 'Instagram', allow_contact: true, tags: ['Em risco', 'Cílios'], notes: 'Normalmente retorna a cada 25 dias para manutenção de cílios. Está há 48 dias sem vir.', total_appointments: 5, total_spent: 750.00, active: true, created_at: '2025-10-01T10:00:00Z', last_appointment_date: format(subDays(today, 48), 'yyyy-MM-dd') },
 ];
 
 export const initialAppointments: Appointment[] = [
@@ -188,6 +191,46 @@ export const initialAppointments: Appointment[] = [
     notes: 'Manutenção de cílios.',
     created_at: `${todayStr}T08:00:00Z`,
   },
+  {
+    id: 'a6',
+    client_id: 'u6',
+    professional_id: 'p2',
+    service_id: 's1',
+    start_time: `${format(subDays(today, 48), 'yyyy-MM-dd')}T14:00:00`,
+    end_time: `${format(subDays(today, 48), 'yyyy-MM-dd')}T16:00:00`,
+    duration_minutes: 120,
+    status: 'completed',
+    price: 180.00,
+    discount: 0,
+    final_price: 180.00,
+    deposit_requested: false,
+    deposit_amount: 0,
+    deposit_paid: false,
+    payment_method: 'pix',
+    payment_status: 'paid',
+    notes: 'Aplicação anterior',
+    created_at: `${format(subDays(today, 50), 'yyyy-MM-dd')}T08:00:00Z`,
+  },
+  {
+    id: 'a7',
+    client_id: 'u6',
+    professional_id: 'p2',
+    service_id: 's2',
+    start_time: `${format(subDays(today, 73), 'yyyy-MM-dd')}T10:00:00`,
+    end_time: `${format(subDays(today, 73), 'yyyy-MM-dd')}T11:30:00`,
+    duration_minutes: 90,
+    status: 'completed',
+    price: 110.00,
+    discount: 0,
+    final_price: 110.00,
+    deposit_requested: false,
+    deposit_amount: 0,
+    deposit_paid: false,
+    payment_method: 'credit_card',
+    payment_status: 'paid',
+    notes: 'Manutenção',
+    created_at: `${format(subDays(today, 75), 'yyyy-MM-dd')}T08:00:00Z`,
+  }
 ];
 
 export const initialTemplates: NotificationTemplate[] = [
@@ -353,9 +396,6 @@ export const initialPhotos: TreatmentPhoto[] = [
   }
 ];
 
-// =========================================================
-// FINANCEIRO, CAIXA, PACOTES, COMISSÕES, PROMOÇÕES & FIDELIDADE
-// =========================================================
 export const initialTransactions: FinancialTransaction[] = [
   { id: 'tr-1', type: 'income', category_name: 'Atendimentos', description: 'Atendimento: Mariana Alcantara (Volume Brasileiro)', amount: 180.00, payment_method: 'pix', paid_at: `${todayStr}T09:30:00Z`, status: 'completed', created_at: `${todayStr}T09:30:00Z` },
   { id: 'tr-2', type: 'income', category_name: 'Sinais de Reserva', description: 'Sinal de Reserva: Patricia Guimarães', amount: 45.00, payment_method: 'pix', paid_at: `${todayStr}T10:15:00Z`, status: 'completed', created_at: `${todayStr}T10:15:00Z` },
@@ -435,4 +475,68 @@ export const initialCommissions: CommissionRecord[] = [
   { id: 'com-2', professional_id: 'p1', professional_name: 'Dra. Camila Ribeiro', client_name: 'Carolina Martins', service_name: 'Design com Henna', appointment_date: todayStr, gross_amount: 65.00, commission_rate: 45, commission_amount: 29.25, status: 'pending', created_at: `${todayStr}T12:15:00Z` },
   { id: 'com-3', professional_id: 'p1', professional_name: 'Dra. Camila Ribeiro', client_name: 'Fernanda Costa', service_name: 'Microblading Fio a Fio', appointment_date: yesterdayStr, gross_amount: 390.00, commission_rate: 45, commission_amount: 175.50, status: 'paid', paid_at: `${yesterdayStr}T18:00:00Z`, created_at: `${yesterdayStr}T17:00:00Z` },
   { id: 'com-4', professional_id: 'p3', professional_name: 'Beatriz Lima', client_name: 'Patricia Guimarães', service_name: 'Limpeza de Pele Profunda', appointment_date: subDays(today, 3).toISOString().split('T')[0], gross_amount: 160.00, commission_rate: 35, commission_amount: 56.00, status: 'paid', paid_at: `${yesterdayStr}T18:00:00Z`, created_at: `${subDays(today, 3).toISOString().split('T')[0]}T16:00:00Z` },
+];
+
+// =========================================================
+// CRM, FOLLOW-UPS & RETENTION SEED DATA
+// =========================================================
+export const initialFollowUps: ClientFollowUp[] = [
+  {
+    id: 'flw-1',
+    client_id: 'u6',
+    client_name: 'Renata Albuquerque',
+    client_phone: '11933221100',
+    type: 'risk_retention',
+    reason: 'Acima do intervalo habitual (48 dias sem retorno de cílios)',
+    recommended_date: todayStr,
+    assigned_to_name: 'Ju Cílios',
+    status: 'pending',
+    notes: 'Cliente costuma fazer manutenção a cada 25 dias. Está com 23 dias de atraso.',
+    generated_message: 'Olá, Renata! Tudo bem? Passando para saber como estão seus cílios! Percebemos que já passou o prazo ideal da sua manutenção. Vamos garantir um horário para você esta semana? ✨',
+    created_at: `${todayStr}T08:00:00Z`,
+  },
+  {
+    id: 'flw-2',
+    client_id: 'u3',
+    client_name: 'Carolina Martins',
+    client_phone: '11966554433',
+    type: 'post_procedure',
+    reason: 'Pós-procedimento Design com Henna (conferir fixação)',
+    recommended_date: todayStr,
+    assigned_to_name: 'Dra. Camila',
+    status: 'pending',
+    notes: 'Primeira vez fazendo design com henna.',
+    generated_message: 'Oi, Carol! Como ficou o resultado da sua Henna? Espero que tenha amado! Qualquer dúvida sobre os cuidados é só me chamar. 💕',
+    created_at: `${todayStr}T08:00:00Z`,
+  },
+  {
+    id: 'flw-3',
+    client_id: 'u5',
+    client_name: 'Juliana Moreira Neves',
+    client_phone: '11944332211',
+    type: 'inactive_recovery',
+    reason: 'Recuperação de cliente inativa (+70 dias sem visita)',
+    recommended_date: todayStr,
+    assigned_to_name: 'Dra. Camila',
+    status: 'contacted',
+    contacted_at: `${yesterdayStr}T14:30:00Z`,
+    notes: 'Mensagem de convite especial enviada.',
+    result: 'Respondeu que vai viajar e agenda no retorno semana que vem.',
+    generated_message: 'Olá, Juliana! Estamos com saudades de você aqui no IASIS! Preparamos uma condição especial para sua renovação este mês. Que tal agendarmos?',
+    created_at: `${yesterdayStr}T10:00:00Z`,
+  }
+];
+
+export const initialRecoveryLogs: ClientRecoveryLog[] = [
+  {
+    id: 'rec-log-1',
+    client_id: 'u2',
+    recovered_at: `${yesterdayStr}T15:00:00Z`,
+    inactive_days_count: 112,
+    previous_status: 'inativa',
+    procedure_name: 'Microblading Fio a Fio',
+    amount: 390.00,
+    professional_name: 'Dra. Camila Ribeiro',
+    created_at: `${yesterdayStr}T15:00:00Z`,
+  }
 ];

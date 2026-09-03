@@ -22,6 +22,7 @@ import { Promocoes } from './pages/Promocoes';
 import { Fidelizacao } from './pages/Fidelizacao';
 import { Relatorios } from './pages/Relatorios';
 import { Lembretes } from './pages/Lembretes';
+import { CRM } from './pages/CRM';
 import { Configuracoes } from './pages/Configuracoes';
 import { Login } from './pages/Login';
 
@@ -67,6 +68,7 @@ export function App() {
                   <Route index element={<Dashboard />} />
                   <Route path="agenda" element={<Agenda />} />
                   <Route path="clientes" element={<Clientes />} />
+                  <Route path="crm" element={<CRM />} />
                   <Route path="profissionais" element={<Profissionais />} />
                   <Route path="servicos" element={<Servicos />} />
                   <Route path="anamnese" element={<Anamnese />} />

@@ -25,11 +25,12 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const navigationGroups = [
   {
-    title: 'Atendimento',
+    title: 'Atendimento & CRM',
     items: [
       { name: 'Dashboard', to: '/', icon: LayoutDashboard },
       { name: 'Agenda', to: '/agenda', icon: Calendar },
       { name: 'Clientes', to: '/clientes', icon: Users },
+      { name: 'CRM & Retenção', to: '/crm', icon: Users },
       { name: 'Anamnese', to: '/anamnese', icon: FileText },
     ],
   },

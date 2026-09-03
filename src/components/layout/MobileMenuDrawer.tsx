@@ -15,7 +15,8 @@ import {
   Layers,
   Tag,
   Award,
-  BarChart3
+  BarChart3,
+  Users
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,6 +29,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ isOpen, onCl
   const { logout, profile } = useAuth();
 
   const links = [
+    { name: 'CRM & Retenção', to: '/crm', icon: Users },
     { name: 'Fichas de Anamnese', to: '/anamnese', icon: FileText },
     { name: 'Pacotes de Procedimentos', to: '/pacotes', icon: Layers },
     { name: 'Gestão Financeira', to: '/financeiro', icon: DollarSign },
