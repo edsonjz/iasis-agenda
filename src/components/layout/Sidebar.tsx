@@ -8,6 +8,13 @@ import {
   Sparkles,
   FileText,
   Package,
+  DollarSign,
+  Wallet,
+  Percent,
+  Layers,
+  Tag,
+  Award,
+  BarChart3,
   MessageSquare,
   Settings,
   LogOut,
@@ -16,16 +23,43 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
-const navigationItems = [
-  { name: 'Dashboard', to: '/', icon: LayoutDashboard },
-  { name: 'Agenda', to: '/agenda', icon: Calendar },
-  { name: 'Clientes', to: '/clientes', icon: Users },
-  { name: 'Profissionais', to: '/profissionais', icon: UserCheck },
-  { name: 'Serviços', to: '/servicos', icon: Sparkles },
-  { name: 'Fichas de Anamnese', to: '/anamnese', icon: FileText },
-  { name: 'Produtos & Estoque', to: '/produtos', icon: Package },
-  { name: 'Lembretes', to: '/lembretes', icon: MessageSquare },
-  { name: 'Configurações', to: '/configuracoes', icon: Settings },
+const navigationGroups = [
+  {
+    title: 'Atendimento',
+    items: [
+      { name: 'Dashboard', to: '/', icon: LayoutDashboard },
+      { name: 'Agenda', to: '/agenda', icon: Calendar },
+      { name: 'Clientes', to: '/clientes', icon: Users },
+      { name: 'Anamnese', to: '/anamnese', icon: FileText },
+    ],
+  },
+  {
+    title: 'Serviços & Estoque',
+    items: [
+      { name: 'Serviços', to: '/servicos', icon: Sparkles },
+      { name: 'Profissionais', to: '/profissionais', icon: UserCheck },
+      { name: 'Produtos & Estoque', to: '/produtos', icon: Package },
+      { name: 'Pacotes', to: '/pacotes', icon: Layers },
+    ],
+  },
+  {
+    title: 'Financeiro & Caixa',
+    items: [
+      { name: 'Financeiro', to: '/financeiro', icon: DollarSign },
+      { name: 'Caixa da Recepção', to: '/caixa', icon: Wallet },
+      { name: 'Comissões', to: '/comissoes', icon: Percent },
+    ],
+  },
+  {
+    title: 'Marketing & Gestão',
+    items: [
+      { name: 'Promoções & Cupons', to: '/promocoes', icon: Tag },
+      { name: 'Fidelidade & Cashback', to: '/fidelizacao', icon: Award },
+      { name: 'Lembretes WhatsApp', to: '/lembretes', icon: MessageSquare },
+      { name: 'Relatórios DRE', to: '/relatorios', icon: BarChart3 },
+      { name: 'Configurações', to: '/configuracoes', icon: Settings },
+    ],
+  },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -34,7 +68,7 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 select-none">
       {/* Brand Logo */}
-      <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-200/80 dark:border-slate-800">
+      <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-200/80 dark:border-slate-800 shrink-0">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 to-rose-400 flex items-center justify-center text-white shadow-md shadow-rose-500/20">
           <CalendarCheck2 className="w-5 h-5" />
         </div>
@@ -48,44 +82,51 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navigationItems.map(item => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 group',
-                  isActive
-                    ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon
-                    className={cn(
-                      'w-4 h-4 transition-colors',
-                      isActive ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'
-                    )}
-                  />
-                  <span>{item.name}</span>
-                </>
-              )}
-            </NavLink>
-          );
-        })}
+      {/* Navigation Links Grouped */}
+      <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
+        {navigationGroups.map(group => (
+          <div key={group.title} className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3.5 block mb-1">
+              {group.title}
+            </span>
+            {group.items.map(item => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group',
+                      isActive
+                        ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon
+                        className={cn(
+                          'w-4 h-4 transition-colors shrink-0',
+                          isActive ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'
+                        )}
+                      />
+                      <span className="truncate">{item.name}</span>
+                    </>
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer / Logout */}
-      <div className="p-3 border-t border-slate-200/80 dark:border-slate-800">
+      <div className="p-3 border-t border-slate-200/80 dark:border-slate-800 shrink-0">
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300 transition-colors"
+          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300 transition-colors"
         >
           <LogOut className="w-4 h-4 text-slate-400 group-hover:text-red-600" />
           <span>Sair da conta</span>

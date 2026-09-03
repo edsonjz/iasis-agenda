@@ -1,5 +1,6 @@
-// Re-export anamnesis types
+// Re-export anamnesis and finance types
 export * from './anamnesis';
+export * from './finance';
 
 // =========================================================
 // IASIS AGENDA - CORE TYPES
@@ -204,6 +205,7 @@ export interface FinancialTransaction {
   client_id?: string;
   professional_id?: string;
   category_id?: string;
+  category_name?: string;
   type: 'income' | 'expense';
   description: string;
   amount: number;

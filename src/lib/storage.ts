@@ -12,6 +12,14 @@ import {
   initialProducts,
   initialEvolutions,
   initialPhotos,
+  initialTransactions,
+  initialCashRegisters,
+  initialCashMovements,
+  initialPackages,
+  initialClientPackages,
+  initialPromotions,
+  initialLoyaltyAccounts,
+  initialCommissions,
 } from './mockData';
 import {
   BusinessSettings,
@@ -26,6 +34,15 @@ import {
   TreatmentEvolution,
   TreatmentPhoto,
   Product,
+  FinancialTransaction,
+  CashRegister,
+  CashMovement,
+  Package,
+  ClientPackage,
+  Promotion,
+  LoyaltyAccount,
+  LoyaltyTransaction,
+  CommissionRecord,
 } from '@/types';
 
 // Helper for Local Storage persistence keys
@@ -42,6 +59,14 @@ const STORAGE_KEYS = {
   PRODUCTS: 'iasis_products',
   EVOLUTIONS: 'iasis_evolutions',
   PHOTOS: 'iasis_photos',
+  TRANSACTIONS: 'iasis_transactions',
+  CASH_REGISTERS: 'iasis_cash_registers',
+  CASH_MOVEMENTS: 'iasis_cash_movements',
+  PACKAGES: 'iasis_packages',
+  CLIENT_PACKAGES: 'iasis_client_packages',
+  PROMOTIONS: 'iasis_promotions',
+  LOYALTY_ACCOUNTS: 'iasis_loyalty_accounts',
+  COMMISSIONS: 'iasis_commissions',
   THEME: 'iasis_theme',
 };
 
@@ -74,11 +99,7 @@ export const DataService = {
 
   async saveSettings(settings: BusinessSettings): Promise<BusinessSettings> {
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from('business_settings')
-        .upsert(settings)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('business_settings').upsert(settings).select().single();
       if (!error && data) return data;
     }
     setLocal(STORAGE_KEYS.SETTINGS, settings);
@@ -481,5 +502,260 @@ export const DataService = {
     const list = getLocal<TreatmentPhoto[]>(STORAGE_KEYS.PHOTOS, initialPhotos);
     setLocal(STORAGE_KEYS.PHOTOS, list.filter(p => p.id !== id));
     return true;
+  },
+
+  // ==========================================
+  // FINANCIAL TRANSACTIONS
+  // ==========================================
+  async getTransactions(): Promise<FinancialTransaction[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('financial_transactions').select('*').order('paid_at', { ascending: false });
+      if (!error && data) return data;
+    }
+    return getLocal<FinancialTransaction[]>(STORAGE_KEYS.TRANSACTIONS, initialTransactions);
+  },
+
+  async saveTransaction(tr: FinancialTransaction): Promise<FinancialTransaction> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('financial_transactions').upsert(tr).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<FinancialTransaction[]>(STORAGE_KEYS.TRANSACTIONS, initialTransactions);
+    const idx = list.findIndex(t => t.id === tr.id);
+    let updated: FinancialTransaction[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = tr;
+    } else {
+      updated = [tr, ...list];
+    }
+    setLocal(STORAGE_KEYS.TRANSACTIONS, updated);
+    return tr;
+  },
+
+  async deleteTransaction(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('financial_transactions').delete().eq('id', id);
+    }
+    const list = getLocal<FinancialTransaction[]>(STORAGE_KEYS.TRANSACTIONS, initialTransactions);
+    setLocal(STORAGE_KEYS.TRANSACTIONS, list.filter(t => t.id !== id));
+    return true;
+  },
+
+  // ==========================================
+  // CASH REGISTER & MOVEMENTS
+  // ==========================================
+  async getCashRegisters(): Promise<CashRegister[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('cash_registers').select('*').order('opened_at', { ascending: false });
+      if (!error && data) return data;
+    }
+    return getLocal<CashRegister[]>(STORAGE_KEYS.CASH_REGISTERS, initialCashRegisters);
+  },
+
+  async saveCashRegister(cr: CashRegister): Promise<CashRegister> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('cash_registers').upsert(cr).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<CashRegister[]>(STORAGE_KEYS.CASH_REGISTERS, initialCashRegisters);
+    const idx = list.findIndex(c => c.id === cr.id);
+    let updated: CashRegister[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = cr;
+    } else {
+      updated = [cr, ...list];
+    }
+    setLocal(STORAGE_KEYS.CASH_REGISTERS, updated);
+    return cr;
+  },
+
+  async getCashMovements(): Promise<CashMovement[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('cash_movements').select('*').order('created_at', { ascending: false });
+      if (!error && data) return data;
+    }
+    return getLocal<CashMovement[]>(STORAGE_KEYS.CASH_MOVEMENTS, initialCashMovements);
+  },
+
+  async saveCashMovement(cm: CashMovement): Promise<CashMovement> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('cash_movements').upsert(cm).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<CashMovement[]>(STORAGE_KEYS.CASH_MOVEMENTS, initialCashMovements);
+    const updated = [cm, ...list];
+    setLocal(STORAGE_KEYS.CASH_MOVEMENTS, updated);
+    return cm;
+  },
+
+  // ==========================================
+  // PACKAGES
+  // ==========================================
+  async getPackages(): Promise<Package[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('packages').select('*').order('name');
+      if (!error && data) return data;
+    }
+    return getLocal<Package[]>(STORAGE_KEYS.PACKAGES, initialPackages);
+  },
+
+  async savePackage(pkg: Package): Promise<Package> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('packages').upsert(pkg).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<Package[]>(STORAGE_KEYS.PACKAGES, initialPackages);
+    const idx = list.findIndex(p => p.id === pkg.id);
+    let updated: Package[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = pkg;
+    } else {
+      updated = [...list, pkg];
+    }
+    setLocal(STORAGE_KEYS.PACKAGES, updated);
+    return pkg;
+  },
+
+  async deletePackage(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('packages').delete().eq('id', id);
+    }
+    const list = getLocal<Package[]>(STORAGE_KEYS.PACKAGES, initialPackages);
+    setLocal(STORAGE_KEYS.PACKAGES, list.filter(p => p.id !== id));
+    return true;
+  },
+
+  async getClientPackages(): Promise<ClientPackage[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('client_packages').select('*').order('purchased_at', { ascending: false });
+      if (!error && data) return data;
+    }
+    return getLocal<ClientPackage[]>(STORAGE_KEYS.CLIENT_PACKAGES, initialClientPackages);
+  },
+
+  async saveClientPackage(cpkg: ClientPackage): Promise<ClientPackage> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('client_packages').upsert(cpkg).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<ClientPackage[]>(STORAGE_KEYS.CLIENT_PACKAGES, initialClientPackages);
+    const idx = list.findIndex(c => c.id === cpkg.id);
+    let updated: ClientPackage[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = cpkg;
+    } else {
+      updated = [cpkg, ...list];
+    }
+    setLocal(STORAGE_KEYS.CLIENT_PACKAGES, updated);
+    return cpkg;
+  },
+
+  async deleteClientPackage(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('client_packages').delete().eq('id', id);
+    }
+    const list = getLocal<ClientPackage[]>(STORAGE_KEYS.CLIENT_PACKAGES, initialClientPackages);
+    setLocal(STORAGE_KEYS.CLIENT_PACKAGES, list.filter(c => c.id !== id));
+    return true;
+  },
+
+  // ==========================================
+  // PROMOTIONS
+  // ==========================================
+  async getPromotions(): Promise<Promotion[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('promotions').select('*').order('start_date');
+      if (!error && data) return data;
+    }
+    return getLocal<Promotion[]>(STORAGE_KEYS.PROMOTIONS, initialPromotions);
+  },
+
+  async savePromotion(promo: Promotion): Promise<Promotion> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('promotions').upsert(promo).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<Promotion[]>(STORAGE_KEYS.PROMOTIONS, initialPromotions);
+    const idx = list.findIndex(p => p.id === promo.id);
+    let updated: Promotion[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = promo;
+    } else {
+      updated = [...list, promo];
+    }
+    setLocal(STORAGE_KEYS.PROMOTIONS, updated);
+    return promo;
+  },
+
+  async deletePromotion(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('promotions').delete().eq('id', id);
+    }
+    const list = getLocal<Promotion[]>(STORAGE_KEYS.PROMOTIONS, initialPromotions);
+    setLocal(STORAGE_KEYS.PROMOTIONS, list.filter(p => p.id !== id));
+    return true;
+  },
+
+  // ==========================================
+  // LOYALTY
+  // ==========================================
+  async getLoyaltyAccounts(): Promise<LoyaltyAccount[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('loyalty_accounts').select('*');
+      if (!error && data) return data;
+    }
+    return getLocal<LoyaltyAccount[]>(STORAGE_KEYS.LOYALTY_ACCOUNTS, initialLoyaltyAccounts);
+  },
+
+  async saveLoyaltyAccount(acc: LoyaltyAccount): Promise<LoyaltyAccount> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('loyalty_accounts').upsert(acc).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<LoyaltyAccount[]>(STORAGE_KEYS.LOYALTY_ACCOUNTS, initialLoyaltyAccounts);
+    const idx = list.findIndex(a => a.id === acc.id);
+    let updated: LoyaltyAccount[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = acc;
+    } else {
+      updated = [acc, ...list];
+    }
+    setLocal(STORAGE_KEYS.LOYALTY_ACCOUNTS, updated);
+    return acc;
+  },
+
+  // ==========================================
+  // COMMISSIONS
+  // ==========================================
+  async getCommissions(): Promise<CommissionRecord[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('commission_records').select('*').order('appointment_date', { ascending: false });
+      if (!error && data) return data;
+    }
+    return getLocal<CommissionRecord[]>(STORAGE_KEYS.COMMISSIONS, initialCommissions);
+  },
+
+  async saveCommission(com: CommissionRecord): Promise<CommissionRecord> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('commission_records').upsert(com).select().single();
+      if (data) return data;
+    }
+    const list = getLocal<CommissionRecord[]>(STORAGE_KEYS.COMMISSIONS, initialCommissions);
+    const idx = list.findIndex(c => c.id === com.id);
+    let updated: CommissionRecord[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = com;
+    } else {
+      updated = [com, ...list];
+    }
+    setLocal(STORAGE_KEYS.COMMISSIONS, updated);
+    return com;
   },
 };

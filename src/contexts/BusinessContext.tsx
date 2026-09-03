@@ -13,9 +13,18 @@ import {
   TreatmentPhoto,
   Product,
   DashboardMetrics,
+  FinancialTransaction,
+  CashRegister,
+  CashMovement,
+  Package,
+  ClientPackage,
+  Promotion,
+  LoyaltyAccount,
+  CommissionRecord,
+  PaymentMethod,
 } from '@/types';
 import { DataService } from '@/lib/storage';
-import { isSameDay, parseISO, isThisMonth, differenceInDays } from 'date-fns';
+import { isSameDay, parseISO, isThisMonth, differenceInDays, format } from 'date-fns';
 
 interface BusinessContextType {
   settings: BusinessSettings | null;
@@ -30,11 +39,19 @@ interface BusinessContextType {
   products: Product[];
   evolutions: TreatmentEvolution[];
   photos: TreatmentPhoto[];
+  transactions: FinancialTransaction[];
+  cashRegisters: CashRegister[];
+  cashMovements: CashMovement[];
+  packages: Package[];
+  clientPackages: ClientPackage[];
+  promotions: Promotion[];
+  loyaltyAccounts: LoyaltyAccount[];
+  commissions: CommissionRecord[];
   metrics: DashboardMetrics;
   loading: boolean;
   refreshData: () => Promise<void>;
   
-  // Mutations & Deletions
+  // Core Mutations & Deletions
   saveSettings: (settings: BusinessSettings) => Promise<void>;
   saveCategory: (cat: ServiceCategory) => Promise<void>;
   saveService: (service: Service) => Promise<void>;
@@ -47,7 +64,7 @@ interface BusinessContextType {
   deleteAppointment: (id: string) => Promise<void>;
   saveTemplate: (tpl: NotificationTemplate) => Promise<void>;
   
-  // Phase 3 Mutations
+  // Anamnesis & Procedures
   saveAnamnesisTemplate: (tpl: AnamnesisTemplate) => Promise<void>;
   deleteAnamnesisTemplate: (id: string) => Promise<void>;
   saveAnamnesisRecord: (rec: AnamnesisRecord) => Promise<void>;
@@ -58,6 +75,33 @@ interface BusinessContextType {
   deleteEvolution: (id: string) => Promise<void>;
   savePhoto: (photo: TreatmentPhoto) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
+
+  // Financial & Cash Register
+  saveTransaction: (tr: FinancialTransaction) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  openCashRegister: (initialAmount: number, openedByName: string, notes?: string) => Promise<CashRegister>;
+  closeCashRegister: (id: string, reportedAmount: number, closedByName: string, notes?: string) => Promise<void>;
+  addCashMovement: (type: 'income' | 'expense' | 'sangria' | 'reforco', amount: number, description: string, paymentMethod: PaymentMethod) => Promise<void>;
+
+  // Packages
+  savePackage: (pkg: Package) => Promise<void>;
+  deletePackage: (id: string) => Promise<void>;
+  saveClientPackage: (cpkg: ClientPackage) => Promise<void>;
+  deleteClientPackage: (id: string) => Promise<void>;
+  usePackageSession: (clientPackageId: string, appointmentId?: string) => Promise<void>;
+
+  // Promotions
+  savePromotion: (promo: Promotion) => Promise<void>;
+  deletePromotion: (id: string) => Promise<void>;
+
+  // Loyalty
+  saveLoyaltyAccount: (acc: LoyaltyAccount) => Promise<void>;
+  addLoyaltyPoints: (clientId: string, clientName: string, points: number, cashback: number, description: string) => Promise<void>;
+  redeemLoyaltyPoints: (clientId: string, pointsToRedeem: number, cashbackToRedeem: number, description: string) => Promise<void>;
+
+  // Commissions
+  saveCommission: (com: CommissionRecord) => Promise<void>;
+  payCommission: (id: string) => Promise<void>;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
@@ -75,6 +119,16 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [products, setProducts] = useState<Product[]>([]);
   const [evolutions, setEvolutions] = useState<TreatmentEvolution[]>([]);
   const [photos, setPhotos] = useState<TreatmentPhoto[]>([]);
+  
+  // Financial, Packages, Loyalty
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+  const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+  const [cashMovements, setCashMovements] = useState<CashMovement[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [clientPackages, setClientPackages] = useState<ClientPackage[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loyaltyAccounts, setLoyaltyAccounts] = useState<LoyaltyAccount[]>([]);
+  const [commissions, setCommissions] = useState<CommissionRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadAll = useCallback(async () => {
@@ -92,7 +146,15 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         anaRecs,
         prds,
         evos,
-        phtos
+        phtos,
+        trs,
+        crs,
+        cms,
+        pkgs,
+        cpkgs,
+        prms,
+        loys,
+        comms,
       ] = await Promise.all([
         DataService.getSettings(),
         DataService.getCategories(),
@@ -106,6 +168,14 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         DataService.getProducts(),
         DataService.getEvolutions(),
         DataService.getPhotos(),
+        DataService.getTransactions(),
+        DataService.getCashRegisters(),
+        DataService.getCashMovements(),
+        DataService.getPackages(),
+        DataService.getClientPackages(),
+        DataService.getPromotions(),
+        DataService.getLoyaltyAccounts(),
+        DataService.getCommissions(),
       ]);
 
       setSettings(sett);
@@ -120,6 +190,14 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setProducts(prds);
       setEvolutions(evos);
       setPhotos(phtos);
+      setTransactions(trs);
+      setCashRegisters(crs);
+      setCashMovements(cms);
+      setPackages(pkgs);
+      setClientPackages(cpkgs);
+      setPromotions(prms);
+      setLoyaltyAccounts(loys);
+      setCommissions(comms);
     } catch (err) {
       console.error('Error loading business data:', err);
     } finally {
@@ -226,6 +304,29 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       return [...prev, enriched];
     });
+
+    // Auto-generate commission if appointment completed
+    if (app.status === 'completed' && app.final_price > 0 && app.professional_id) {
+      const prof = professionals.find(p => p.id === app.professional_id);
+      const rate = prof?.default_commission_rate || 40;
+      const commissionAmount = (app.final_price * rate) / 100;
+
+      const commRecord: CommissionRecord = {
+        id: `com_${app.id}`,
+        professional_id: app.professional_id,
+        professional_name: prof?.name || 'Profissional',
+        appointment_id: app.id,
+        client_name: enriched.client?.name || 'Cliente',
+        service_name: enriched.service?.name || 'Procedimento',
+        appointment_date: app.start_time.split('T')[0],
+        gross_amount: app.final_price,
+        commission_rate: rate,
+        commission_amount: commissionAmount,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      };
+      await handleSaveCommission(commRecord);
+    }
   };
 
   const handleDeleteAppointment = async (id: string) => {
@@ -247,7 +348,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  // Anamnesis Templates
+  // Anamnesis
   const handleSaveAnamnesisTemplate = async (tpl: AnamnesisTemplate) => {
     const res = await DataService.saveAnamnesisTemplate(tpl);
     setAnamnesisTemplates(prev => {
@@ -266,7 +367,6 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAnamnesisTemplates(prev => prev.filter(t => t.id !== id));
   };
 
-  // Anamnesis Records
   const handleSaveAnamnesisRecord = async (rec: AnamnesisRecord) => {
     const res = await DataService.saveAnamnesisRecord(rec);
     setAnamnesisRecords(prev => {
@@ -342,6 +442,266 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setPhotos(prev => prev.filter(p => p.id !== id));
   };
 
+  // Financial Transactions
+  const handleSaveTransaction = async (tr: FinancialTransaction) => {
+    const res = await DataService.saveTransaction(tr);
+    setTransactions(prev => {
+      const idx = prev.findIndex(t => t.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [res, ...prev];
+    });
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    await DataService.deleteTransaction(id);
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Cash Register
+  const handleOpenCashRegister = async (initialAmount: number, openedByName: string, notes?: string): Promise<CashRegister> => {
+    const newRegister: CashRegister = {
+      id: `cr_${Date.now()}`,
+      opened_at: new Date().toISOString(),
+      opened_by_name: openedByName,
+      initial_amount: initialAmount,
+      status: 'open',
+      notes,
+    };
+    const res = await DataService.saveCashRegister(newRegister);
+    setCashRegisters(prev => [res, ...prev]);
+    return res;
+  };
+
+  const handleCloseCashRegister = async (id: string, reportedAmount: number, closedByName: string, notes?: string) => {
+    const reg = cashRegisters.find(c => c.id === id);
+    if (!reg) return;
+
+    // Calculate expected amount based on movements
+    const movements = cashMovements.filter(m => m.cash_register_id === id);
+    const cashIn = movements
+      .filter(m => (m.type === 'income' || m.type === 'reforco') && m.payment_method === 'cash')
+      .reduce((sum, m) => sum + m.amount, 0);
+    const cashOut = movements
+      .filter(m => (m.type === 'expense' || m.type === 'sangria') && m.payment_method === 'cash')
+      .reduce((sum, m) => sum + m.amount, 0);
+
+    const expected = reg.initial_amount + cashIn - cashOut;
+    const diff = reportedAmount - expected;
+
+    const closed: CashRegister = {
+      ...reg,
+      closed_at: new Date().toISOString(),
+      closed_by_name: closedByName,
+      closing_expected_amount: expected,
+      closing_reported_amount: reportedAmount,
+      difference_amount: diff,
+      status: 'closed',
+      notes: notes || reg.notes,
+    };
+
+    await DataService.saveCashRegister(closed);
+    setCashRegisters(prev => prev.map(c => (c.id === id ? closed : c)));
+  };
+
+  const handleAddCashMovement = async (
+    type: 'income' | 'expense' | 'sangria' | 'reforco',
+    amount: number,
+    description: string,
+    paymentMethod: PaymentMethod
+  ) => {
+    const currentOpen = cashRegisters.find(c => c.status === 'open');
+    const move: CashMovement = {
+      id: `cm_${Date.now()}`,
+      cash_register_id: currentOpen?.id || 'cr-default',
+      type,
+      amount,
+      description,
+      payment_method: paymentMethod,
+      created_at: new Date().toISOString(),
+    };
+    const res = await DataService.saveCashMovement(move);
+    setCashMovements(prev => [res, ...prev]);
+  };
+
+  // Packages
+  const handleSavePackage = async (pkg: Package) => {
+    const res = await DataService.savePackage(pkg);
+    setPackages(prev => {
+      const idx = prev.findIndex(p => p.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [...prev, res];
+    });
+  };
+
+  const handleDeletePackage = async (id: string) => {
+    await DataService.deletePackage(id);
+    setPackages(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleSaveClientPackage = async (cpkg: ClientPackage) => {
+    const res = await DataService.saveClientPackage(cpkg);
+    setClientPackages(prev => {
+      const idx = prev.findIndex(c => c.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [res, ...prev];
+    });
+  };
+
+  const handleDeleteClientPackage = async (id: string) => {
+    await DataService.deleteClientPackage(id);
+    setClientPackages(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleUsePackageSession = async (clientPackageId: string, appointmentId?: string) => {
+    const cpkg = clientPackages.find(c => c.id === clientPackageId);
+    if (!cpkg || cpkg.used_sessions >= cpkg.total_sessions) return;
+
+    const newUsed = cpkg.used_sessions + 1;
+    const isCompleted = newUsed >= cpkg.total_sessions;
+
+    const updated: ClientPackage = {
+      ...cpkg,
+      used_sessions: newUsed,
+      status: isCompleted ? 'completed' : 'active',
+    };
+
+    await DataService.saveClientPackage(updated);
+    setClientPackages(prev => prev.map(c => (c.id === clientPackageId ? updated : c)));
+  };
+
+  // Promotions
+  const handleSavePromotion = async (promo: Promotion) => {
+    const res = await DataService.savePromotion(promo);
+    setPromotions(prev => {
+      const idx = prev.findIndex(p => p.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [...prev, res];
+    });
+  };
+
+  const handleDeletePromotion = async (id: string) => {
+    await DataService.deletePromotion(id);
+    setPromotions(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Loyalty
+  const handleSaveLoyaltyAccount = async (acc: LoyaltyAccount) => {
+    const res = await DataService.saveLoyaltyAccount(acc);
+    setLoyaltyAccounts(prev => {
+      const idx = prev.findIndex(a => a.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [...prev, res];
+    });
+  };
+
+  const handleAddLoyaltyPoints = async (
+    clientId: string,
+    clientName: string,
+    points: number,
+    cashback: number,
+    description: string
+  ) => {
+    let acc = loyaltyAccounts.find(a => a.client_id === clientId);
+    if (!acc) {
+      acc = {
+        id: `loy_${clientId}`,
+        client_id: clientId,
+        client_name: clientName,
+        points_balance: 0,
+        cashback_balance: 0,
+        tier: 'Bronze',
+        total_earned_points: 0,
+        total_cashback_earned: 0,
+        updated_at: new Date().toISOString(),
+      };
+    }
+
+    const newPoints = acc.points_balance + points;
+    const newCashback = acc.cashback_balance + cashback;
+    const totalEarned = acc.total_earned_points + points;
+
+    let tier: 'Bronze' | 'Prata' | 'Ouro' | 'VIP' = 'Bronze';
+    if (totalEarned >= 1000) tier = 'VIP';
+    else if (totalEarned >= 500) tier = 'Ouro';
+    else if (totalEarned >= 200) tier = 'Prata';
+
+    const updated: LoyaltyAccount = {
+      ...acc,
+      points_balance: newPoints,
+      cashback_balance: newCashback,
+      tier,
+      total_earned_points: totalEarned,
+      total_cashback_earned: acc.total_cashback_earned + cashback,
+      updated_at: new Date().toISOString(),
+    };
+
+    await handleSaveLoyaltyAccount(updated);
+  };
+
+  const handleRedeemLoyaltyPoints = async (
+    clientId: string,
+    pointsToRedeem: number,
+    cashbackToRedeem: number,
+    description: string
+  ) => {
+    const acc = loyaltyAccounts.find(a => a.client_id === clientId);
+    if (!acc) return;
+
+    const updated: LoyaltyAccount = {
+      ...acc,
+      points_balance: Math.max(0, acc.points_balance - pointsToRedeem),
+      cashback_balance: Math.max(0, acc.cashback_balance - cashbackToRedeem),
+      updated_at: new Date().toISOString(),
+    };
+
+    await handleSaveLoyaltyAccount(updated);
+  };
+
+  // Commissions
+  const handleSaveCommission = async (com: CommissionRecord) => {
+    const res = await DataService.saveCommission(com);
+    setCommissions(prev => {
+      const idx = prev.findIndex(c => c.id === res.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = res;
+        return copy;
+      }
+      return [res, ...prev];
+    });
+  };
+
+  const handlePayCommission = async (id: string) => {
+    const com = commissions.find(c => c.id === id);
+    if (!com) return;
+    const paid: CommissionRecord = {
+      ...com,
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+    };
+    await handleSaveCommission(paid);
+  };
+
   // Metrics calculation
   const metrics: DashboardMetrics = useMemo(() => {
     const today = new Date();
@@ -375,7 +735,6 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return differenceInDays(today, parseISO(c.last_appointment_date)) >= inactiveCutoff;
     }).length;
 
-    // Count clients without anamnesis records
     const clientsWithAnamnesis = new Set(anamnesisRecords.map(r => r.client_id));
     const pendingAnamnesisCount = clients.filter(c => !clientsWithAnamnesis.has(c.id)).length;
 
@@ -409,6 +768,14 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         products,
         evolutions,
         photos,
+        transactions,
+        cashRegisters,
+        cashMovements,
+        packages,
+        clientPackages,
+        promotions,
+        loyaltyAccounts,
+        commissions,
         metrics,
         loading,
         refreshData: loadAll,
@@ -433,6 +800,23 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteEvolution: handleDeleteEvolution,
         savePhoto: handleSavePhoto,
         deletePhoto: handleDeletePhoto,
+        saveTransaction: handleSaveTransaction,
+        deleteTransaction: handleDeleteTransaction,
+        openCashRegister: handleOpenCashRegister,
+        closeCashRegister: handleCloseCashRegister,
+        addCashMovement: handleAddCashMovement,
+        savePackage: handleSavePackage,
+        deletePackage: handleDeletePackage,
+        saveClientPackage: handleSaveClientPackage,
+        deleteClientPackage: handleDeleteClientPackage,
+        usePackageSession: handleUsePackageSession,
+        savePromotion: handleSavePromotion,
+        deletePromotion: handleDeletePromotion,
+        saveLoyaltyAccount: handleSaveLoyaltyAccount,
+        addLoyaltyPoints: handleAddLoyaltyPoints,
+        redeemLoyaltyPoints: handleRedeemLoyaltyPoints,
+        saveCommission: handleSaveCommission,
+        payCommission: handlePayCommission,
       }}
     >
       {children}

@@ -14,6 +14,13 @@ import { Profissionais } from './pages/Profissionais';
 import { Servicos } from './pages/Servicos';
 import { Anamnese } from './pages/Anamnese';
 import { Produtos } from './pages/Produtos';
+import { Financeiro } from './pages/Financeiro';
+import { Caixa } from './pages/Caixa';
+import { Comissoes } from './pages/Comissoes';
+import { Pacotes } from './pages/Pacotes';
+import { Promocoes } from './pages/Promocoes';
+import { Fidelizacao } from './pages/Fidelizacao';
+import { Relatorios } from './pages/Relatorios';
 import { Lembretes } from './pages/Lembretes';
 import { Configuracoes } from './pages/Configuracoes';
 import { Login } from './pages/Login';
@@ -64,6 +71,13 @@ export function App() {
                   <Route path="servicos" element={<Servicos />} />
                   <Route path="anamnese" element={<Anamnese />} />
                   <Route path="produtos" element={<Produtos />} />
+                  <Route path="financeiro" element={<Financeiro />} />
+                  <Route path="caixa" element={<Caixa />} />
+                  <Route path="comissoes" element={<Comissoes />} />
+                  <Route path="pacotes" element={<Pacotes />} />
+                  <Route path="promocoes" element={<Promocoes />} />
+                  <Route path="fidelizacao" element={<Fidelizacao />} />
+                  <Route path="relatorios" element={<Relatorios />} />
                   <Route path="lembretes" element={<Lembretes />} />
                   <Route path="configuracoes" element={<Configuracoes />} />
                 </Route>

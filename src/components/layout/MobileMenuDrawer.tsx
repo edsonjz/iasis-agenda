@@ -1,7 +1,22 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Modal } from '../common/Modal';
-import { UserCheck, Sparkles, MessageSquare, Settings, LogOut, FileText, Package } from 'lucide-react';
+import {
+  UserCheck,
+  Sparkles,
+  MessageSquare,
+  Settings,
+  LogOut,
+  FileText,
+  Package,
+  DollarSign,
+  Wallet,
+  Percent,
+  Layers,
+  Tag,
+  Award,
+  BarChart3
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface MobileMenuDrawerProps {
@@ -14,10 +29,17 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ isOpen, onCl
 
   const links = [
     { name: 'Fichas de Anamnese', to: '/anamnese', icon: FileText },
+    { name: 'Pacotes de Procedimentos', to: '/pacotes', icon: Layers },
+    { name: 'Gestão Financeira', to: '/financeiro', icon: DollarSign },
+    { name: 'Caixa da Recepção', to: '/caixa', icon: Wallet },
+    { name: 'Comissões da Equipe', to: '/comissoes', icon: Percent },
+    { name: 'Promoções & Cupons', to: '/promocoes', icon: Tag },
+    { name: 'Fidelidade & Cashback', to: '/fidelizacao', icon: Award },
     { name: 'Produtos & Estoque', to: '/produtos', icon: Package },
     { name: 'Profissionais & Equipe', to: '/profissionais', icon: UserCheck },
     { name: 'Serviços & Procedimentos', to: '/servicos', icon: Sparkles },
-    { name: 'Lembretes & Mensagens', to: '/lembretes', icon: MessageSquare },
+    { name: 'Lembretes WhatsApp', to: '/lembretes', icon: MessageSquare },
+    { name: 'Relatórios DRE & Indicadores', to: '/relatorios', icon: BarChart3 },
     { name: 'Configurações da Estética', to: '/configuracoes', icon: Settings },
   ];
 
@@ -34,7 +56,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ isOpen, onCl
           </div>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1 max-h-[50vh] overflow-y-auto pr-1">
           {links.map(link => {
             const Icon = link.icon;
             return (
@@ -42,7 +64,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ isOpen, onCl
                 key={link.to}
                 to={link.to}
                 onClick={onClose}
-                className="flex items-center gap-3 p-3 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-3 p-2.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <Icon className="w-4 h-4 text-slate-400" />
                 <span>{link.name}</span>
@@ -57,7 +79,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ isOpen, onCl
               onClose();
               logout();
             }}
-            className="w-full flex items-center gap-3 p-3 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+            className="w-full flex items-center gap-3 p-2.5 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             <span>Sair da conta</span>
