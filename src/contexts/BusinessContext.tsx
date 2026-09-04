@@ -29,6 +29,7 @@ import {
 import { DataService } from '@/lib/storage';
 import { defaultCRMConfig, calculateClientMetrics } from '@/lib/crmEngine';
 import { isSameDay, parseISO, isThisMonth, differenceInDays, format } from 'date-fns';
+import { generateUUID } from '@/lib/utils';
 
 interface BusinessContextType {
   settings: BusinessSettings | null;
@@ -346,7 +347,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const commissionAmount = (app.final_price * rate) / 100;
 
       const commRecord: CommissionRecord = {
-        id: `com_${app.id}`,
+        id: generateUUID(),
         professional_id: app.professional_id,
         professional_name: prof?.name || 'Profissional',
         appointment_id: app.id,
@@ -366,7 +367,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const daysGap = differenceInDays(parseISO(app.start_time), parseISO(enriched.client.last_appointment_date));
         if (daysGap >= crmConfig.inactive_days) {
           const recovery: ClientRecoveryLog = {
-            id: `rec_${Date.now()}`,
+            id: generateUUID(),
             client_id: enriched.client.id,
             recovered_at: new Date().toISOString(),
             inactive_days_count: daysGap,
@@ -518,7 +519,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Cash Register
   const handleOpenCashRegister = async (initialAmount: number, openedByName: string, notes?: string): Promise<CashRegister> => {
     const newRegister: CashRegister = {
-      id: `cr_${Date.now()}`,
+      id: generateUUID(),
       opened_at: new Date().toISOString(),
       opened_by_name: openedByName,
       initial_amount: initialAmount,
@@ -568,7 +569,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   ) => {
     const currentOpen = cashRegisters.find(c => c.status === 'open');
     const move: CashMovement = {
-      id: `cm_${Date.now()}`,
+      id: generateUUID(),
       cash_register_id: currentOpen?.id || 'cr-default',
       type,
       amount,

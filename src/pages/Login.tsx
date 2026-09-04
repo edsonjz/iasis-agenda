@@ -12,9 +12,10 @@ export const Login: React.FC = () => {
   const { success, error: toastError } = useToast();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('studiojaquesouza@gmail.com');
-  const [password, setPassword] = useState('Agenda@2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,29 +23,35 @@ export const Login: React.FC = () => {
       toastError('Informe seu e-mail de acesso');
       return;
     }
+    if (!password.trim()) {
+      toastError('Informe sua senha');
+      return;
+    }
+    if (attempts >= 5) {
+      toastError('Muitas tentativas. Aguarde 1 minuto antes de tentar novamente.');
+      return;
+    }
 
     try {
       setLoading(true);
       const res = await login(email, password);
       if (res.error) {
+        setAttempts(prev => prev + 1);
         toastError(res.error, 'Falha no Login');
+        if (attempts >= 4) {
+          setTimeout(() => setAttempts(0), 60000);
+        }
       } else {
+        setAttempts(0);
         success('Bem-vinda ao IASIS AGENDA!');
         navigate('/');
       }
     } catch (err) {
+      setAttempts(prev => prev + 1);
       toastError('Não foi possível realizar o login. Tente novamente.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemoLogin = async () => {
-    setLoading(true);
-    await login('admin@iasisagenda.com.br', 'demo123');
-    success('Acesso concedido como Administradora');
-    navigate('/');
-    setLoading(false);
   };
 
   return (
@@ -101,18 +108,6 @@ export const Login: React.FC = () => {
               Entrar no Sistema
             </Button>
           </form>
-
-          {/* Quick Demo Access Button */}
-          <div className="pt-4 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={handleQuickDemoLogin}
-              className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-xs font-semibold text-rose-400 hover:text-rose-300 border border-slate-700 transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Entrar em Modo Demonstração (1 Clique)
-            </button>
-          </div>
         </Card>
 
         {/* Footer Security Badge */}

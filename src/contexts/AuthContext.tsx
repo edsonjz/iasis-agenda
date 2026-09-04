@@ -14,16 +14,6 @@ interface AuthContextType {
   changePassword: (newPassword: string) => Promise<{ error: string | null }>;
 }
 
-const defaultMockProfile: Profile = {
-  id: 'a0000000-0000-0000-0000-000000000002',
-  role: 'admin',
-  full_name: 'Jaque Souza',
-  display_name: 'Jaque Souza',
-  phone: '(11) 98765-4321',
-  active: true,
-  created_at: new Date().toISOString(),
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -32,114 +22,129 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
     async function initAuth() {
       if (isSupabaseConfigured && supabase) {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            setUser(session.user);
-            const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-            if (data) {
-              setProfile(data);
-            } else {
-              const newProf: Profile = {
-                id: session.user.id,
-                role: 'admin',
-                full_name: session.user.user_metadata?.full_name || 'Jaque Souza',
-                display_name: 'Jaque Souza',
-                active: true,
-                created_at: new Date().toISOString(),
-              };
-              setProfile(newProf);
-              await supabase.from('profiles').upsert(newProf);
-            }
+          // Always verify session freshness with the server
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error || !session?.user) {
+            // No valid session — user must log in
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+
+          setUser(session.user);
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (data) {
+            setProfile(data);
           }
         } catch (err) {
-          console.warn('Supabase auth session error, using fallback:', err);
+          console.warn('Supabase auth session error:', err);
+          setUser(null);
+          setProfile(null);
         }
 
-        supabase.auth.onAuthStateChange(async (_event, session) => {
-          setUser(session?.user ?? null);
-          if (!session?.user) {
+        // Listen for auth state changes (login, logout, token refresh)
+        const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_OUT' || !session?.user) {
+            setUser(null);
             setProfile(null);
-          } else if (supabase) {
-            const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-            if (data) setProfile(data);
+            return;
+          }
+
+          setUser(session.user);
+
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            if (supabase) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+              if (profileData) setProfile(profileData);
+            }
           }
         });
+
+        subscription = data.subscription;
       } else {
-        // Modo Local / Demo
-        const storedProfile = localStorage.getItem('iasis_mock_profile');
-        if (storedProfile) {
-          setProfile(JSON.parse(storedProfile));
-          setUser({ id: 'demo-user-id', email: 'studiojaquesouza@gmail.com' });
-        } else {
-          setProfile(defaultMockProfile);
-          setUser({ id: 'demo-user-id', email: 'studiojaquesouza@gmail.com' });
-        }
+        // Supabase not configured — no access without it
+        setUser(null);
+        setProfile(null);
       }
       setLoading(false);
     }
 
     initAuth();
+
+    // Cleanup: unsubscribe from auth state changes
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const login = async (email: string, _pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        // 1. Tenta signIn padrão
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: _pass,
-        });
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: 'Sistema de autenticação não configurado. Contate o administrador.' };
+    }
 
-        if (!error && data.user) {
-          setUser(data.user);
-          return { error: null };
-        }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: _pass,
+      });
 
-        // 2. Se o usuário ainda não existir ou der erro de schema, tenta auto-registro seguro via API
-        if (error && (error.message.includes('Invalid login') || error.message.includes('schema') || error.message.includes('not found'))) {
-          const signUpRes = await supabase.auth.signUp({
-            email: cleanEmail,
-            password: _pass,
-            options: {
-              data: { full_name: 'Jaque Souza' }
-            }
-          });
-
-          if (!signUpRes.error && signUpRes.data.user) {
-            setUser(signUpRes.data.user);
-            const prof: Profile = {
-              id: signUpRes.data.user.id,
-              role: 'admin',
-              full_name: 'Jaque Souza',
-              display_name: 'Jaque Souza',
-              phone: '(11) 98765-4321',
-              active: true,
-              created_at: new Date().toISOString(),
-            };
-            setProfile(prof);
-            await supabase.from('profiles').upsert(prof);
-            return { error: null };
-          }
-
-          return { error: error.message };
-        }
-
-        return { error: error?.message || 'Falha na autenticação' };
-      } catch (err: any) {
-        return { error: err.message || 'Erro ao conectar com o serviço de autenticação' };
+      if (error) {
+        // Do NOT attempt auto-signup — only existing users can log in
+        return { error: 'E-mail ou senha incorretos. Verifique suas credenciais.' };
       }
-    } else {
-      // Local demo login
-      const mock = { ...defaultMockProfile, full_name: cleanEmail.split('@')[0] || 'Jaque Souza' };
-      setProfile(mock);
-      setUser({ id: 'demo-user-id', email: cleanEmail });
-      localStorage.setItem('iasis_mock_profile', JSON.stringify(mock));
-      return { error: null };
+
+      if (data.user) {
+        setUser(data.user);
+
+        // Load or create profile for this authenticated user
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileData) {
+          setProfile(profileData);
+        } else {
+          // Create profile for legitimately registered user
+          const newProf: Profile = {
+            id: data.user.id,
+            role: 'admin',
+            full_name: data.user.user_metadata?.full_name || 'Administrador',
+            display_name: data.user.user_metadata?.full_name || 'Admin',
+            active: true,
+            created_at: new Date().toISOString(),
+          };
+          setProfile(newProf);
+          await supabase.from('profiles').upsert(newProf);
+        }
+
+        return { error: null };
+      }
+
+      return { error: 'Falha na autenticação' };
+    } catch (err: any) {
+      return { error: err.message || 'Erro ao conectar com o serviço de autenticação' };
     }
   };
 
@@ -149,7 +154,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     setProfile(null);
-    localStorage.removeItem('iasis_mock_profile');
+
+    // Clear all Supabase and app session data from localStorage
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('sb-') || key.startsWith('iasis_mock'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
   };
 
   const updateProfile = async (data: Partial<Profile>) => {
@@ -158,8 +172,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(updated);
     if (isSupabaseConfigured && supabase) {
       await supabase.from('profiles').update(data).eq('id', profile.id);
-    } else {
-      localStorage.setItem('iasis_mock_profile', JSON.stringify(updated));
     }
   };
 
@@ -173,6 +185,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!/[0-9]/.test(newPassword)) {
       return { error: 'A senha deve conter ao menos um número.' };
     }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+      return { error: 'A senha deve conter ao menos um caractere especial.' };
+    }
 
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase.auth.updateUser({
@@ -182,13 +197,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: error.message };
       }
       return { error: null };
-    } else {
-      localStorage.setItem('iasis_mock_password', newPassword);
-      return { error: null };
     }
+
+    return { error: 'Sistema de autenticação não configurado.' };
   };
 
-  const role: UserRole = profile?.role || 'admin';
+  const role: UserRole = profile?.role || 'professional';
   const isAdmin = role === 'admin';
 
   return (
