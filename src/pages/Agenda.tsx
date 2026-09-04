@@ -214,9 +214,25 @@ export const Agenda: React.FC = () => {
         {viewMode === 'day' && (
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
             {timeSlots.map(timeStr => {
-              const dayApps = filteredAppointments.filter(app => {
+              const [slotH, slotM] = timeStr.split(':').map(Number);
+              const slotStartMins = slotH * 60 + slotM;
+              const slotEndMins = slotStartMins + 30;
+
+              const startingApps = filteredAppointments.filter(app => {
+                if (app.status === 'cancelled' || app.status === 'no_show') return false;
                 const appDate = parseISO(app.start_time);
                 return isSameDay(appDate, currentDate) && format(appDate, 'HH:mm') === timeStr;
+              });
+
+              const ongoingApps = filteredAppointments.filter(app => {
+                if (app.status === 'cancelled' || app.status === 'no_show') return false;
+                const appStart = parseISO(app.start_time);
+                const appEnd = parseISO(app.end_time);
+                if (!isSameDay(appStart, currentDate)) return false;
+                if (format(appStart, 'HH:mm') === timeStr) return false;
+                const appStartMins = appStart.getHours() * 60 + appStart.getMinutes();
+                const appEndMins = appEnd.getHours() * 60 + appEnd.getMinutes();
+                return slotStartMins < appEndMins && slotEndMins > appStartMins;
               });
 
               return (
@@ -231,7 +247,7 @@ export const Agenda: React.FC = () => {
 
                   {/* Appointments in this slot */}
                   <div className="flex-1 p-2 flex flex-wrap gap-2 items-center">
-                    {dayApps.map(app => {
+                    {startingApps.map(app => {
                       const statusInfo = APPOINTMENT_STATUS_MAP[app.status] || APPOINTMENT_STATUS_MAP.scheduled;
 
                       return (
@@ -264,7 +280,7 @@ export const Agenda: React.FC = () => {
                             <div className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
                               {formatCurrency(app.final_price)}
                             </div>
-                            <div className="text-[10px] text-slate-400">
+                            <div className="text-[10px] text-slate-400 font-semibold">
                               {formatTimeBR(app.start_time)} - {formatTimeBR(app.end_time)}
                             </div>
                           </div>
@@ -272,7 +288,28 @@ export const Agenda: React.FC = () => {
                       );
                     })}
 
-                    {dayApps.length === 0 && (
+                    {ongoingApps.map(app => (
+                      <div
+                        key={`ongoing-${app.id}`}
+                        onClick={() => {
+                          setSelectedAppointment(app);
+                          setIsModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-rose-200 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 text-xs cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors w-full max-w-md"
+                        style={{
+                          borderLeftWidth: '3px',
+                          borderLeftColor: app.professional?.color || '#bf3f57',
+                        }}
+                        title={`Horário bloqueado por atendimento em andamento até ${formatTimeBR(app.end_time)}`}
+                      >
+                        <Clock className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span className="truncate">
+                          🔒 <strong>{app.professional?.nickname || app.professional?.name}</strong> em atendimento ({app.client?.name} — {app.service?.name}) até às <strong>{formatTimeBR(app.end_time)}</strong>
+                        </span>
+                      </div>
+                    ))}
+
+                    {startingApps.length === 0 && ongoingApps.length === 0 && (
                       <button
                         onClick={() => handleCreateAtSlot(currentDate, timeStr)}
                         className="opacity-0 group-hover:opacity-100 text-xs font-medium text-slate-400 hover:text-rose-600 flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all"
@@ -310,56 +347,88 @@ export const Agenda: React.FC = () => {
 
             {/* Time Rows */}
             <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-              {timeSlots.map(timeStr => (
-                <div key={timeStr} className="grid grid-cols-8 min-h-[3.5rem]">
-                  <div className="p-2 text-right text-[11px] font-bold text-slate-400 bg-slate-50/50 dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800">
-                    {timeStr}
-                  </div>
-                  {weekDays.map(day => {
-                    const dayApps = filteredAppointments.filter(app => {
-                      const appDate = parseISO(app.start_time);
-                      return isSameDay(appDate, day) && format(appDate, 'HH:mm') === timeStr;
-                    });
+              {timeSlots.map(timeStr => {
+                const [slotH, slotM] = timeStr.split(':').map(Number);
+                const slotStartMins = slotH * 60 + slotM;
+                const slotEndMins = slotStartMins + 30;
 
-                    return (
-                      <div
-                        key={day.toISOString()}
-                        className="p-1 border-l border-slate-100 dark:border-slate-800 relative group hover:bg-slate-50/80 dark:hover:bg-slate-850/50 transition-colors"
-                      >
-                        {dayApps.map(app => (
-                          <div
-                            key={app.id}
-                            onClick={() => {
-                              setSelectedAppointment(app);
-                              setIsModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg border text-[10px] cursor-pointer shadow-xs bg-white dark:bg-slate-800 truncate"
-                            style={{
-                              borderLeftWidth: '3px',
-                              borderLeftColor: app.professional?.color || '#bf3f57',
-                            }}
-                            title={`${app.client?.name} - ${app.service?.name}`}
-                          >
-                            <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
-                              {app.client?.name}
+                return (
+                  <div key={timeStr} className="grid grid-cols-8 min-h-[3.5rem]">
+                    <div className="p-2 text-right text-[11px] font-bold text-slate-400 bg-slate-50/50 dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800">
+                      {timeStr}
+                    </div>
+                    {weekDays.map(day => {
+                      const startingApps = filteredAppointments.filter(app => {
+                        if (app.status === 'cancelled' || app.status === 'no_show') return false;
+                        const appDate = parseISO(app.start_time);
+                        return isSameDay(appDate, day) && format(appDate, 'HH:mm') === timeStr;
+                      });
+
+                      const ongoingApps = filteredAppointments.filter(app => {
+                        if (app.status === 'cancelled' || app.status === 'no_show') return false;
+                        const appStart = parseISO(app.start_time);
+                        const appEnd = parseISO(app.end_time);
+                        if (!isSameDay(appStart, day)) return false;
+                        if (format(appStart, 'HH:mm') === timeStr) return false;
+                        const appStartMins = appStart.getHours() * 60 + appStart.getMinutes();
+                        const appEndMins = appEnd.getHours() * 60 + appEnd.getMinutes();
+                        return slotStartMins < appEndMins && slotEndMins > appStartMins;
+                      });
+
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className="p-1 border-l border-slate-100 dark:border-slate-800 relative group hover:bg-slate-50/80 dark:hover:bg-slate-850/50 transition-colors flex flex-col gap-1"
+                        >
+                          {startingApps.map(app => (
+                            <div
+                              key={app.id}
+                              onClick={() => {
+                                setSelectedAppointment(app);
+                                setIsModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg border text-[10px] cursor-pointer shadow-xs bg-white dark:bg-slate-850 truncate"
+                              style={{
+                                borderLeftWidth: '3px',
+                                borderLeftColor: app.professional?.color || '#bf3f57',
+                              }}
+                              title={`${app.client?.name} - ${app.service?.name} (${formatTimeBR(app.start_time)} às ${formatTimeBR(app.end_time)})`}
+                            >
+                              <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                                {app.client?.name}
+                              </div>
+                              <div className="text-slate-500 truncate">{app.service?.name}</div>
                             </div>
-                            <div className="text-slate-500 truncate">{app.service?.name}</div>
-                          </div>
-                        ))}
+                          ))}
 
-                        {dayApps.length === 0 && (
-                          <button
-                            onClick={() => handleCreateAtSlot(day, timeStr)}
-                            className="w-full h-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-slate-300 hover:text-rose-600 text-xs"
-                          >
-                            +
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                          {ongoingApps.map(app => (
+                            <div
+                              key={`ongoing-wk-${app.id}`}
+                              onClick={() => {
+                                setSelectedAppointment(app);
+                                setIsModalOpen(true);
+                              }}
+                              className="p-1 rounded border border-dashed border-rose-200 dark:border-rose-900/60 bg-rose-50/30 text-[9px] text-rose-700 dark:text-rose-400 truncate cursor-pointer"
+                              title={`Horário bloqueado até ${formatTimeBR(app.end_time)}`}
+                            >
+                              🔒 {app.client?.name} ({formatTimeBR(app.end_time)})
+                            </div>
+                          ))}
+
+                          {startingApps.length === 0 && ongoingApps.length === 0 && (
+                            <button
+                              onClick={() => handleCreateAtSlot(day, timeStr)}
+                              className="w-full h-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-slate-300 hover:text-rose-600 text-xs"
+                            >
+                              +
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

@@ -7,7 +7,7 @@ import { ClientSearchCombobox } from '../common/ClientSearchCombobox';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Appointment, AppointmentStatus, PaymentMethod } from '@/types';
-import { checkScheduleConflict, formatTimeBR, formatDateBR } from '@/lib/dateUtils';
+import { checkScheduleConflict, formatTimeBR, formatDateBR, calculateEndTimeFormatted } from '@/lib/dateUtils';
 import { formatCurrency, getWhatsAppUrl } from '@/lib/utils';
 import { APPOINTMENT_STATUS_MAP, PAYMENT_METHODS_MAP } from '@/lib/constants';
 import { AlertCircle, Plus, Copy, Calendar, Clock, DollarSign, User, Sparkles, MessageCircle } from 'lucide-react';
@@ -110,7 +110,14 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     }
   };
 
-  // Conflict Detection
+  const selectedService = useMemo(() => {
+    return services.find(s => s.id === serviceId) || null;
+  }, [services, serviceId]);
+
+  const bufferMinutes = selectedService?.buffer_minutes || 0;
+  const endTimeFormatted = calculateEndTimeFormatted(time, durationMinutes);
+
+  // Conflict Detection with Buffer & Enriched Details
   const conflictInfo = useMemo(() => {
     if (!date || !time || !professionalId || !durationMinutes) return { hasConflict: false };
     const startDateTime = `${date}T${time}:00`;
@@ -118,10 +125,11 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       professionalId,
       startDateTime,
       durationMinutes,
+      bufferMinutes,
       existingAppointments: appointments,
       excludeAppointmentId: appointment?.id,
     });
-  }, [date, time, professionalId, durationMinutes, appointments, appointment]);
+  }, [date, time, professionalId, durationMinutes, bufferMinutes, appointments, appointment]);
 
   const finalPrice = Math.max(0, price - discount);
 
@@ -165,7 +173,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       return;
     }
     if (conflictInfo.hasConflict) {
-      warning('Aviso: Este horário colide com outro agendamento desta profissional. Ajuste o horário antes de salvar.');
+      toastError(`Atenção: Horário Indisponível! ${conflictInfo.details || 'Esta profissional já possui outro agendamento neste horário.'}`);
       return;
     }
 
@@ -229,14 +237,19 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Conflict Warning Alert */}
+        {/* Conflict Warning Alert with Detailed Collision Info */}
         {conflictInfo.hasConflict && (
-          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs animate-in fade-in">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold">Conflito de Horário detectado!</span>
-              <p className="mt-0.5 text-amber-800 dark:text-amber-300">
-                Esta profissional já possui atendimento marcado neste mesmo horário. Por favor, escolha outro horário ou profissional.
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border-2 border-rose-400 dark:border-rose-800 text-rose-950 dark:text-rose-200 text-xs animate-in fade-in">
+            <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-extrabold text-sm text-rose-900 dark:text-rose-100 flex items-center gap-1.5">
+                ⛔ Horário Indisponível (Choque de Horários Detectado)
+              </span>
+              <p className="text-rose-800 dark:text-rose-300 leading-relaxed font-medium">
+                {conflictInfo.details || 'Esta profissional já possui outro atendimento agendado que colide com este período.'}
+              </p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-400 font-semibold pt-1">
+                🔒 Para garantir que não haja atendimentos cruzados, escolha outro horário ou selecione outra profissional disponível.
               </p>
             </div>
           </div>
@@ -328,30 +341,58 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
         </div>
 
         {/* Date, Time & Duration */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Input
-            label="Data"
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            required
-          />
-          <Input
-            label="Horário de Início"
-            type="time"
-            value={time}
-            onChange={e => setTime(e.target.value)}
-            required
-          />
-          <Input
-            label="Duração (minutos)"
-            type="number"
-            min={15}
-            step={15}
-            value={durationMinutes}
-            onChange={e => setDurationMinutes(Number(e.target.value))}
-            required
-          />
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Input
+              label="Data"
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              required
+            />
+            <Input
+              label="Horário de Início"
+              type="time"
+              value={time}
+              onChange={e => setTime(e.target.value)}
+              required
+            />
+            <Input
+              label="Duração do Procedimento (minutos)"
+              type="number"
+              min={15}
+              step={5}
+              value={durationMinutes}
+              onChange={e => setDurationMinutes(Number(e.target.value))}
+              required
+            />
+          </div>
+
+          {/* Real-time Time Block & Schedule Lock Feedback */}
+          {time && durationMinutes > 0 && (
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl text-xs transition-colors ${
+              conflictInfo.hasConflict
+                ? 'bg-rose-100/80 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200'
+                : 'bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Clock className={`w-4 h-4 shrink-0 ${conflictInfo.hasConflict ? 'text-rose-600' : 'text-emerald-600'}`} />
+                <span>
+                  <strong>Período Reservado na Agenda:</strong> das <span className="font-bold underline">{time}</span> às <span className="font-bold underline">{endTimeFormatted}</span> ({durationMinutes} min)
+                  {bufferMinutes > 0 && (
+                    <span className="font-medium text-slate-500"> + {bufferMinutes}min intervalo</span>
+                  )}
+                </span>
+              </div>
+              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${
+                conflictInfo.hasConflict
+                  ? 'bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-100'
+                  : 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100'
+              }`}>
+                {conflictInfo.hasConflict ? '⚠️ Horário Ocupado' : '✅ Horário Livre e Bloqueado'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Price, Discount & Final Price Calculation */}
@@ -522,8 +563,18 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" size="sm" loading={isSubmitting}>
-              {appointment ? 'Salvar Alterações' : 'Confirmar Agendamento'}
+            <Button
+              type="submit"
+              size="sm"
+              loading={isSubmitting}
+              disabled={conflictInfo.hasConflict}
+              className={conflictInfo.hasConflict ? 'opacity-60 cursor-not-allowed bg-slate-400 hover:bg-slate-400 text-white' : ''}
+            >
+              {conflictInfo.hasConflict
+                ? '⛔ Horário Ocupado'
+                : appointment
+                ? 'Salvar Alterações'
+                : 'Confirmar Agendamento'}
             </Button>
           </div>
         </div>
