@@ -269,9 +269,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const handleSaveCategory = async (cat: ServiceCategory) => {
+    const originalId = cat.id;
     const res = await DataService.saveCategory(cat);
     setCategories(prev => {
-      const idx = prev.findIndex(c => c.id === res.id);
+      const idx = prev.findIndex(c => c.id === res.id || (originalId && c.id === originalId));
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = res;
@@ -283,9 +284,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Services
   const handleSaveService = async (service: Service) => {
+    const originalId = service.id;
     const res = await DataService.saveService(service);
     setServices(prev => {
-      const idx = prev.findIndex(s => s.id === res.id);
+      const idx = prev.findIndex(s => s.id === res.id || (originalId && s.id === originalId));
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = res;
@@ -302,9 +304,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Professionals
   const handleSaveProfessional = async (prof: Professional) => {
+    const originalId = prof.id;
     const res = await DataService.saveProfessional(prof);
     setProfessionals(prev => {
-      const idx = prev.findIndex(p => p.id === res.id);
+      const idx = prev.findIndex(p => p.id === res.id || (originalId && p.id === originalId));
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = res;
@@ -321,9 +324,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Clients
   const handleSaveClient = async (client: Client) => {
+    const originalId = client.id;
     const res = await DataService.saveClient(client);
     setClients(prev => {
-      const idx = prev.findIndex(c => c.id === res.id);
+      const idx = prev.findIndex(c => c.id === res.id || (originalId && c.id === originalId));
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = res;
@@ -346,6 +350,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Appointments
   const handleSaveAppointment = async (app: Appointment) => {
+    const originalId = app.id;
     const enriched: Appointment = {
       ...app,
       client: clients.find(c => c.id === app.client_id) || app.client,
@@ -355,13 +360,13 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const res = await DataService.saveAppointment(enriched);
     setAppointments(prev => {
-      const idx = prev.findIndex(a => a.id === res.id);
+      const idx = prev.findIndex(a => a.id === res.id || (originalId && a.id === originalId));
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = enriched;
+        copy[idx] = res;
         return copy;
       }
-      return [...prev, enriched];
+      return [...prev, res];
     });
 
     // Auto-generate commission if appointment completed
@@ -466,9 +471,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Products
   const handleSaveProduct = async (prod: Product) => {
+    const originalId = prod.id;
     const res = await DataService.saveProduct(prod);
     setProducts(prev => {
-      const idx = prev.findIndex(p => p.id === res.id);
+      const idx = prev.findIndex(p => p.id === res.id || (originalId && p.id === originalId));
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = res;

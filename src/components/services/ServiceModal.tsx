@@ -5,8 +5,9 @@ import { Input } from '../common/Input';
 import { Select } from '../common/Select';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
-import { Service } from '@/types';
+import { Service, ServiceCategory } from '@/types';
 import { generateUUID } from '@/lib/utils';
+import { Plus } from 'lucide-react';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -15,7 +16,7 @@ interface ServiceModalProps {
 }
 
 export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, service }) => {
-  const { categories, saveService, deleteService } = useBusiness();
+  const { categories, saveCategory, saveService, deleteService } = useBusiness();
   const { success, error: toastError } = useToast();
 
   const [name, setName] = useState('');
@@ -23,10 +24,16 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
   const [description, setDescription] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [bufferMinutes, setBufferMinutes] = useState(10);
+  const [isVariablePrice, setIsVariablePrice] = useState(false);
   const [price, setPrice] = useState(150);
   const [promotionalPrice, setPromotionalPrice] = useState<number | undefined>(undefined);
   const [requiresAnamnesis, setRequiresAnamnesis] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Inline Category Creation State
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   useEffect(() => {
     if (service) {
@@ -35,7 +42,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
       setDescription(service.description || '');
       setDurationMinutes(service.duration_minutes);
       setBufferMinutes(service.buffer_minutes || 0);
-      setPrice(service.price);
+      const isZeroPrice = service.price === 0 || service.price === undefined || Number.isNaN(service.price);
+      setIsVariablePrice(isZeroPrice);
+      setPrice(isZeroPrice ? 0 : service.price);
       setPromotionalPrice(service.promotional_price);
       setRequiresAnamnesis(service.requires_anamnesis ?? true);
     } else {
@@ -44,11 +53,45 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
       setDescription('');
       setDurationMinutes(60);
       setBufferMinutes(10);
+      setIsVariablePrice(false);
       setPrice(150);
       setPromotionalPrice(undefined);
       setRequiresAnamnesis(true);
     }
+    setIsCreatingCategory(false);
+    setNewCategoryName('');
   }, [service, isOpen, categories]);
+
+  const handleCreateCategory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanName = newCategoryName.trim();
+    if (!cleanName) {
+      toastError('Informe o nome da categoria');
+      return;
+    }
+
+    try {
+      setIsSavingCategory(true);
+      const newCat: ServiceCategory = {
+        id: generateUUID(),
+        name: cleanName,
+        color: '#bf3f57',
+        sort_order: categories.length + 1,
+        active: true,
+      };
+
+      await saveCategory(newCat);
+      setCategoryId(newCat.id);
+      setNewCategoryName('');
+      setIsCreatingCategory(false);
+      success(`Categoria "${cleanName}" criada com sucesso!`);
+    } catch (err) {
+      console.error(err);
+      toastError('Erro ao criar categoria.');
+    } finally {
+      setIsSavingCategory(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,13 +99,17 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
       toastError('Nome do serviço é obrigatório');
       return;
     }
-    if (price <= 0) {
-      toastError('Preço deve ser maior que zero');
+
+    if (!isVariablePrice && price <= 0) {
+      toastError('Preço deve ser maior que zero ou marque a opção "Definir valor após o procedimento"');
       return;
     }
 
     try {
       setIsSubmitting(true);
+      const finalPrice = isVariablePrice ? 0 : price;
+      const finalPromo = isVariablePrice ? undefined : (promotionalPrice || undefined);
+
       const serviceData: Service = {
         id: service?.id || generateUUID(),
         name: name.trim(),
@@ -70,18 +117,18 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
         description: description.trim() || undefined,
         duration_minutes: durationMinutes,
         buffer_minutes: bufferMinutes,
-        price,
-        promotional_price: promotionalPrice || undefined,
+        price: finalPrice,
+        promotional_price: finalPromo,
         requires_anamnesis: requiresAnamnesis,
         active: true,
       };
 
       await saveService(serviceData);
-      success(service ? 'Serviço atualizado!' : 'Serviço cadastrado!');
+      success(service ? 'Procedimento atualizado!' : 'Procedimento cadastrado!');
       onClose();
     } catch (err) {
       console.error(err);
-      toastError('Erro ao salvar serviço.');
+      toastError('Erro ao salvar procedimento.');
     } finally {
       setIsSubmitting(false);
     }
@@ -89,9 +136,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
 
   const handleDelete = async () => {
     if (!service) return;
-    if (confirm(`Deseja excluir o serviço "${service.name}"?`)) {
+    if (confirm(`Deseja excluir o procedimento "${service.name}"?`)) {
       await deleteService(service.id);
-      success('Serviço excluído');
+      success('Procedimento excluído');
       onClose();
     }
   };
@@ -113,17 +160,77 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
           required
         />
 
-        <Select
-          label="Categoria"
-          value={categoryId}
-          onChange={e => setCategoryId(e.target.value)}
-        >
-          {categories.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
+        {/* Category Field with Inline Creation */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Categoria *
+            </label>
+            {!isCreatingCategory && (
+              <button
+                type="button"
+                onClick={() => setIsCreatingCategory(true)}
+                className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium flex items-center gap-1 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Nova Categoria
+              </button>
+            )}
+          </div>
+
+          {isCreatingCategory ? (
+            <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-xl space-y-2">
+              <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                Criar Nova Categoria de Procedimento
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nome da categoria (ex: Massagens, Sobrancelhas...)"
+                  value={newCategoryName}
+                  onChange={e => setNewCategoryName(e.target.value)}
+                  className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:outline-none"
+                  autoFocus
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateCategory();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleCreateCategory()}
+                  loading={isSavingCategory}
+                >
+                  Salvar
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsCreatingCategory(false);
+                    setNewCategoryName('');
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Select
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+            >
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
 
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
@@ -158,23 +265,58 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input
-            label="Preço Padrão (R$)"
-            type="number"
-            step="0.01"
-            value={price}
-            onChange={e => setPrice(Number(e.target.value))}
-            required
-          />
-          <Input
-            label="Preço Promocional (opcional)"
-            type="number"
-            step="0.01"
-            value={promotionalPrice || ''}
-            onChange={e => setPromotionalPrice(e.target.value ? Number(e.target.value) : undefined)}
-            placeholder="Ex: 120.00"
-          />
+        {/* Pricing Section with Variable / Post-procedure Price Option */}
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Precificação
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isVariablePrice}
+                onChange={e => {
+                  setIsVariablePrice(e.target.checked);
+                  if (e.target.checked) {
+                    setPrice(0);
+                    setPromotionalPrice(undefined);
+                  } else if (price === 0) {
+                    setPrice(150);
+                  }
+                }}
+                className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
+              />
+              <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                Definir valor após o procedimento (sem valor fixo)
+              </span>
+            </label>
+          </div>
+
+          {isVariablePrice ? (
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+              <span className="font-bold">⭐ Valor Aberto:</span> Este procedimento não terá preço fixo pré-definido. O valor cobrado poderá ser inserido livremente durante ou após o atendimento na agenda.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Preço Padrão (R$)"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={price}
+                onChange={e => setPrice(Number(e.target.value))}
+                required={!isVariablePrice}
+              />
+              <Input
+                label="Preço Promocional (opcional)"
+                type="number"
+                step="0.01"
+                value={promotionalPrice || ''}
+                onChange={e => setPromotionalPrice(e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="Ex: 120.00"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 pt-1">

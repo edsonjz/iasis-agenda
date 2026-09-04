@@ -25,7 +25,7 @@ import {
   ClientRecoveryLog,
 } from '@/types';
 import { defaultCRMConfig } from './crmEngine';
-import { generateUUID, isValidUUID } from './utils';
+import { generateUUID, isValidUUID, deterministicUUID } from './utils';
 
 // Helper for Local Storage persistence keys
 const STORAGE_KEYS = {
@@ -39,6 +39,7 @@ const STORAGE_KEYS = {
   ANAMNESIS_TEMPLATES: 'iasis_anamnesis_templates',
   ANAMNESIS_RECORDS: 'iasis_anamnesis_records',
   PRODUCTS: 'iasis_products',
+  PRODUCT_CATEGORIES: 'iasis_product_categories',
   EVOLUTIONS: 'iasis_evolutions',
   PHOTOS: 'iasis_photos',
   TRANSACTIONS: 'iasis_transactions',
@@ -162,8 +163,8 @@ export const DEMO_IDS = {
 };
 
 function ensureUUID(id?: string | null): string {
-  if (id && isValidUUID(id)) return id;
-  return generateUUID();
+  if (!id) return generateUUID();
+  return deterministicUUID(id);
 }
 
 function getLocal<T>(key: string, defaultVal: T): T {
@@ -328,6 +329,7 @@ export const DataService = {
   },
 
   async saveCategory(cat: ServiceCategory): Promise<ServiceCategory> {
+    const originalId = cat.id;
     const validCat: ServiceCategory = {
       ...cat,
       id: ensureUUID(cat.id),
@@ -341,8 +343,8 @@ export const DataService = {
       }
     }
     const list = getLocal<ServiceCategory[]>(STORAGE_KEYS.CATEGORIES, []);
-    const idx = list.findIndex(c => c.id === validCat.id);
-    const updated = idx >= 0 ? list.map(c => (c.id === validCat.id ? validCat : c)) : [...list, validCat];
+    const idx = list.findIndex(c => c.id === validCat.id || (originalId && c.id === originalId));
+    const updated = idx >= 0 ? list.map((c, i) => (i === idx ? validCat : c)) : [...list, validCat];
     setLocal(STORAGE_KEYS.CATEGORIES, updated);
     return validCat;
   },
@@ -362,6 +364,7 @@ export const DataService = {
   },
 
   async saveService(service: Service): Promise<Service> {
+    const originalId = service.id;
     const validService: Service = {
       ...service,
       id: ensureUUID(service.id),
@@ -376,8 +379,8 @@ export const DataService = {
       }
     }
     const list = getLocal<Service[]>(STORAGE_KEYS.SERVICES, []);
-    const idx = list.findIndex(s => s.id === validService.id);
-    const updated = idx >= 0 ? list.map(s => (s.id === validService.id ? validService : s)) : [...list, validService];
+    const idx = list.findIndex(s => s.id === validService.id || (originalId && s.id === originalId));
+    const updated = idx >= 0 ? list.map((s, i) => (i === idx ? validService : s)) : [...list, validService];
     setLocal(STORAGE_KEYS.SERVICES, updated);
     return validService;
   },
@@ -419,6 +422,7 @@ export const DataService = {
   },
 
   async saveProfessional(prof: Professional): Promise<Professional> {
+    const originalId = prof.id;
     const validProf: Professional = {
       ...prof,
       id: ensureUUID(prof.id),
@@ -432,8 +436,8 @@ export const DataService = {
       }
     }
     const list = getLocal<Professional[]>(STORAGE_KEYS.PROFESSIONALS, []);
-    const idx = list.findIndex(p => p.id === validProf.id);
-    const updated = idx >= 0 ? list.map(p => (p.id === validProf.id ? validProf : p)) : [...list, validProf];
+    const idx = list.findIndex(p => p.id === validProf.id || (originalId && p.id === originalId));
+    const updated = idx >= 0 ? list.map((p, i) => (i === idx ? validProf : p)) : [...list, validProf];
     setLocal(STORAGE_KEYS.PROFESSIONALS, updated);
     return validProf;
   },
@@ -484,6 +488,7 @@ export const DataService = {
   },
 
   async saveClient(client: Client): Promise<Client> {
+    const originalId = client.id;
     const validClient: Client = {
       ...client,
       id: ensureUUID(client.id),
@@ -497,8 +502,8 @@ export const DataService = {
       }
     }
     const list = getLocal<Client[]>(STORAGE_KEYS.CLIENTS, []);
-    const idx = list.findIndex(c => c.id === validClient.id);
-    const updated = idx >= 0 ? list.map(c => (c.id === validClient.id ? validClient : c)) : [validClient, ...list];
+    const idx = list.findIndex(c => c.id === validClient.id || (originalId && c.id === originalId));
+    const updated = idx >= 0 ? list.map((c, i) => (i === idx ? validClient : c)) : [validClient, ...list];
     setLocal(STORAGE_KEYS.CLIENTS, updated);
     return validClient;
   },
@@ -624,6 +629,7 @@ export const DataService = {
   },
 
   async saveAppointment(app: Appointment): Promise<Appointment> {
+    const originalId = app.id;
     const validId = ensureUUID(app.id);
     const calculatedFinalPrice = Math.max(0, (app.price || 0) - (app.discount || 0));
     
@@ -678,16 +684,16 @@ export const DataService = {
           service: app.service,
         };
         const list = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
-        const idx = list.findIndex(a => a.id === savedApp.id);
-        const updated = idx >= 0 ? list.map(a => (a.id === savedApp.id ? savedApp : a)) : [savedApp, ...list];
+        const idx = list.findIndex(a => a.id === savedApp.id || (originalId && a.id === originalId));
+        const updated = idx >= 0 ? list.map((a, i) => (i === idx ? savedApp : a)) : [savedApp, ...list];
         setLocal(STORAGE_KEYS.APPOINTMENTS, updated);
         return savedApp;
       }
     }
 
     const list = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
-    const idx = list.findIndex(a => a.id === validApp.id);
-    const updated = idx >= 0 ? list.map(a => (a.id === validApp.id ? validApp : a)) : [validApp, ...list];
+    const idx = list.findIndex(a => a.id === validApp.id || (originalId && a.id === originalId));
+    const updated = idx >= 0 ? list.map((a, i) => (i === idx ? validApp : a)) : [validApp, ...list];
     setLocal(STORAGE_KEYS.APPOINTMENTS, updated);
     return validApp;
   },
@@ -834,7 +840,37 @@ export const DataService = {
     return clean;
   },
 
+  DEFAULT_PRODUCT_CATEGORIES: [
+    'Cílios & Lash',
+    'Micropigmentação',
+    'Lábios',
+    'Sobrancelhas',
+    'Tratamentos Faciais',
+    'Descartáveis & Higiene',
+    'Venda Home Care',
+  ],
+
+  getProductCategories(): string[] {
+    const custom = getLocal<string[]>(STORAGE_KEYS.PRODUCT_CATEGORIES, []);
+    const products = getLocal<Product[]>(STORAGE_KEYS.PRODUCTS, []);
+    const fromProducts = products.map(p => p.category).filter(Boolean);
+    const combined = Array.from(new Set([...DataService.DEFAULT_PRODUCT_CATEGORIES, ...custom, ...fromProducts]));
+    return combined;
+  },
+
+  saveProductCategory(catName: string): string[] {
+    const trimmed = catName.trim();
+    if (!trimmed) return DataService.getProductCategories();
+    const custom = getLocal<string[]>(STORAGE_KEYS.PRODUCT_CATEGORIES, []);
+    if (!custom.includes(trimmed)) {
+      const updated = [...custom, trimmed];
+      setLocal(STORAGE_KEYS.PRODUCT_CATEGORIES, updated);
+    }
+    return DataService.getProductCategories();
+  },
+
   async saveProduct(prod: Product): Promise<Product> {
+    const originalId = prod.id;
     const validProd: Product = {
       ...prod,
       id: ensureUUID(prod.id),
@@ -848,9 +884,15 @@ export const DataService = {
       }
     }
     const list = getLocal<Product[]>(STORAGE_KEYS.PRODUCTS, []);
-    const idx = list.findIndex(p => p.id === validProd.id);
-    const updated = idx >= 0 ? list.map(p => (p.id === validProd.id ? validProd : p)) : [...list, validProd];
+    const idx = list.findIndex(p => p.id === validProd.id || (originalId && p.id === originalId));
+    const updated = idx >= 0 ? list.map((p, i) => (i === idx ? validProd : p)) : [...list, validProd];
     setLocal(STORAGE_KEYS.PRODUCTS, updated);
+
+    // Save product category to known categories
+    if (validProd.category) {
+      DataService.saveProductCategory(validProd.category);
+    }
+
     return validProd;
   },
 

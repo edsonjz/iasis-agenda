@@ -6,6 +6,9 @@ import { Select } from '../common/Select';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Product } from '@/types';
+import { generateUUID } from '@/lib/utils';
+import { DataService } from '@/lib/storage';
+import { Plus } from 'lucide-react';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -18,11 +21,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   onClose,
   product,
 }) => {
-  const { saveProduct, deleteProduct } = useBusiness();
+  const { saveProduct, deleteProduct, products } = useBusiness();
   const { success, error: toastError } = useToast();
 
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Cílios');
+  const [category, setCategory] = useState('Cílios & Lash');
   const [brand, setBrand] = useState('');
   const [costPrice, setCostPrice] = useState(0);
   const [salePrice, setSalePrice] = useState<number | undefined>(undefined);
@@ -33,10 +36,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [batchNumber, setBatchNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Category creation state
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
   useEffect(() => {
+    const loadedCategories = DataService.getProductCategories();
+    const fromProds = products.map(p => p.category).filter(Boolean);
+    const combined = Array.from(new Set([...loadedCategories, ...fromProds]));
+    setAvailableCategories(combined);
+
     if (product) {
       setName(product.name);
-      setCategory(product.category || 'Cílios');
+      setCategory(product.category || combined[0] || 'Cílios & Lash');
       setBrand(product.brand || '');
       setCostPrice(product.cost_price);
       setSalePrice(product.sale_price);
@@ -47,7 +60,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setBatchNumber(product.batch_number || '');
     } else {
       setName('');
-      setCategory('Cílios');
+      setCategory(combined[0] || 'Cílios & Lash');
       setBrand('');
       setCostPrice(0);
       setSalePrice(undefined);
@@ -57,7 +70,23 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setExpirationDate('');
       setBatchNumber('');
     }
-  }, [product, isOpen]);
+    setIsCreatingCategory(false);
+    setNewCategoryName('');
+  }, [product, isOpen, products]);
+
+  const handleCreateCategory = () => {
+    const clean = newCategoryName.trim();
+    if (!clean) {
+      toastError('Informe o nome da categoria');
+      return;
+    }
+    const updated = DataService.saveProductCategory(clean);
+    setAvailableCategories(updated);
+    setCategory(clean);
+    setNewCategoryName('');
+    setIsCreatingCategory(false);
+    success(`Categoria "${clean}" criada com sucesso!`);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +98,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     try {
       setIsSubmitting(true);
       const prodData: Product = {
-        id: product?.id || `prd_${Date.now()}`,
+        id: product?.id || generateUUID(),
         name: name.trim(),
         category,
         brand: brand.trim() || undefined,
@@ -112,28 +141,96 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           required
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select
-            label="Categoria"
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-          >
-            <option value="Cílios">Cílios & Lash</option>
-            <option value="Micropigmentação">Micropigmentação</option>
-            <option value="Lábios">Lábios</option>
-            <option value="Sobrancelhas">Sobrancelhas</option>
-            <option value="Facial">Tratamentos Faciais</option>
-            <option value="Descartáveis">Descartáveis & Higiene</option>
-            <option value="Home Care">Venda Home Care</option>
-          </Select>
+        {/* Category Field with Inline Creation */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Categoria *
+            </label>
+            {!isCreatingCategory && (
+              <button
+                type="button"
+                onClick={() => setIsCreatingCategory(true)}
+                className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium flex items-center gap-1 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Nova Categoria
+              </button>
+            )}
+          </div>
 
-          <Input
-            label="Marca / Fabricante"
-            value={brand}
-            onChange={e => setBrand(e.target.value)}
-            placeholder="Ex: Master, RB Kollors, Nagaraku"
-          />
+          {isCreatingCategory ? (
+            <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-xl space-y-2">
+              <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                Criar Nova Categoria de Produto / Estoque
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nome da categoria (ex: Tinturas, Descartáveis...)"
+                  value={newCategoryName}
+                  onChange={e => setNewCategoryName(e.target.value)}
+                  className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:outline-none"
+                  autoFocus
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateCategory();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCreateCategory}
+                >
+                  Salvar
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsCreatingCategory(false);
+                    setNewCategoryName('');
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+              >
+                {availableCategories.map(cat => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </Select>
+
+              <Input
+                label="Marca / Fabricante"
+                value={brand}
+                onChange={e => setBrand(e.target.value)}
+                placeholder="Ex: Master, RB Kollors, Nagaraku"
+              />
+            </div>
+          )}
         </div>
+
+        {isCreatingCategory && (
+          <div>
+            <Input
+              label="Marca / Fabricante"
+              value={brand}
+              onChange={e => setBrand(e.target.value)}
+              placeholder="Ex: Master, RB Kollors, Nagaraku"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Input

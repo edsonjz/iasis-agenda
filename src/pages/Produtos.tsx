@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useBusiness } from '@/contexts/BusinessContext';
+import { useToast } from '@/contexts/ToastContext';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { ProductModal } from '@/components/products/ProductModal';
 import { formatCurrency } from '@/lib/utils';
 import { formatDateBR } from '@/lib/dateUtils';
+import { DataService } from '@/lib/storage';
 import { Product } from '@/types';
 import {
   Package,
@@ -20,12 +22,36 @@ import {
 
 export const Produtos: React.FC = () => {
   const { products } = useBusiness();
+  const { success, error: toastError } = useToast();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  // Quick Category creation on page
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [customCategories, setCustomCategories] = useState<string[]>(() => DataService.getProductCategories());
+
+  const categories = useMemo(() => {
+    const fromProds = products.map(p => p.category).filter(Boolean);
+    return Array.from(new Set([...customCategories, ...fromProds]));
+  }, [customCategories, products]);
+
+  const handleCreateCategory = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = newCatName.trim();
+    if (!clean) {
+      toastError('Informe o nome da categoria');
+      return;
+    }
+    const updated = DataService.saveProductCategory(clean);
+    setCustomCategories(updated);
+    setSelectedCategory(clean);
+    setNewCatName('');
+    setIsCreatingCategory(false);
+    success(`Categoria "${clean}" criada com sucesso!`);
+  };
 
   const filteredProducts = products.filter(p => {
     const q = searchQuery.toLowerCase().trim();
@@ -103,6 +129,48 @@ export const Produtos: React.FC = () => {
                 {cat}
               </button>
             ))}
+
+            {!isCreatingCategory ? (
+              <button
+                onClick={() => setIsCreatingCategory(true)}
+                className="text-xs px-2.5 py-1.5 rounded-xl font-medium border border-dashed border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors whitespace-nowrap flex items-center gap-1 shrink-0"
+                title="Criar nova categoria de produtos"
+              >
+                <Plus className="w-3.5 h-3.5" /> Categoria
+              </button>
+            ) : (
+              <div className="flex items-center gap-1 shrink-0">
+                <input
+                  type="text"
+                  placeholder="Nome..."
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateCategory();
+                    }
+                  }}
+                  className="w-28 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleCreateCategory()}
+                  className="px-2 py-1 bg-rose-600 text-white text-xs rounded-lg font-medium hover:bg-rose-700"
+                >
+                  OK
+                </button>
+                <button
+                  onClick={() => {
+                    setIsCreatingCategory(false);
+                    setNewCatName('');
+                  }}
+                  className="px-1.5 py-1 text-xs text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </Card>

@@ -135,7 +135,14 @@ export const Servicos: React.FC = () => {
               {/* Bottom Price */}
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                  {srv.promotional_price ? (
+                  {srv.price <= 0 || !srv.price ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/80 px-2 py-0.5 rounded-lg">
+                        Valor a definir
+                      </span>
+                      <span className="text-[10px] text-slate-400">Pós-atendimento</span>
+                    </div>
+                  ) : srv.promotional_price ? (
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-base font-extrabold text-rose-600">
                         {formatCurrency(srv.promotional_price)}

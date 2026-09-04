@@ -439,29 +439,39 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
         </div>
 
         {/* Price, Discount & Final Price Calculation */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200/80 dark:border-slate-800">
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Valor Bruto (R$)</label>
-            <Input
-              type="number"
-              step="0.01"
-              value={price}
-              onChange={e => setPrice(Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Desconto (R$)</label>
-            <Input
-              type="number"
-              step="0.01"
-              value={discount}
-              onChange={e => setDiscount(Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Valor Final</label>
-            <div className="text-base font-bold text-rose-600 dark:text-rose-400 py-2.5">
-              {formatCurrency(finalPrice)}
+        <div className="space-y-2 p-3.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200/80 dark:border-slate-800">
+          {selectedService && (selectedService.price === 0 || !selectedService.price) && (
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <span>💡</span>
+              <span><strong>Procedimento com valor a definir:</strong> Você pode deixar R$ 0,00 por enquanto e preencher o valor final durante ou após a realização do procedimento.</span>
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Valor Bruto (R$)</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price}
+                onChange={e => setPrice(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Desconto (R$)</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={discount}
+                onChange={e => setDiscount(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Valor Final</label>
+              <div className="text-base font-bold text-rose-600 dark:text-rose-400 py-2.5">
+                {formatCurrency(finalPrice)}
+              </div>
             </div>
           </div>
         </div>
