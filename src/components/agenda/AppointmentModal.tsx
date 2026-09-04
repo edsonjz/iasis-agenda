@@ -8,7 +8,7 @@ import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Appointment, AppointmentStatus, PaymentMethod } from '@/types';
 import { checkScheduleConflict, formatTimeBR, formatDateBR, calculateEndTimeFormatted } from '@/lib/dateUtils';
-import { formatCurrency, getWhatsAppUrl } from '@/lib/utils';
+import { formatCurrency, getWhatsAppUrl, generateUUID } from '@/lib/utils';
 import { APPOINTMENT_STATUS_MAP, PAYMENT_METHODS_MAP } from '@/lib/constants';
 import { AlertCircle, Plus, Copy, Calendar, Clock, DollarSign, User, Sparkles, MessageCircle } from 'lucide-react';
 import { format, parseISO, addMinutes } from 'date-fns';
@@ -140,7 +140,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       return;
     }
     const newClient = {
-      id: Math.random().toString(36).substring(2, 9),
+      id: generateUUID(),
       name: newClientName,
       whatsapp: newClientWhatsApp.replace(/\D/g, ''),
       allow_contact: true,
@@ -184,7 +184,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       const endIso = addMinutes(startIso, durationMinutes);
 
       const appData: Appointment = {
-        id: appointment?.id || Math.random().toString(36).substring(2, 9),
+        id: appointment?.id || generateUUID(),
         client_id: clientId,
         professional_id: professionalId,
         service_id: serviceId,

@@ -7,6 +7,7 @@ import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Client } from '@/types';
 import { DEFAULT_TAGS } from '@/lib/constants';
+import { generateUUID } from '@/lib/utils';
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -93,7 +94,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, clien
       const cleanWhatsApp = whatsapp.replace(/\D/g, '');
 
       const clientData: Client = {
-        id: client?.id || Math.random().toString(36).substring(2, 9),
+        id: client?.id || generateUUID(),
         name: name.trim(),
         nickname: nickname.trim() || undefined,
         cpf: cpf.trim() || undefined,

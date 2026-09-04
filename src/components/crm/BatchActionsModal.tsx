@@ -8,6 +8,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { Client, ClientFollowUp, FollowUpType } from '@/types';
 import { format } from 'date-fns';
 import { CheckSquare, Tag, MessageSquare, Download, Users } from 'lucide-react';
+import { generateUUID } from '@/lib/utils';
 
 interface BatchActionsModalProps {
   isOpen: boolean;
@@ -72,7 +73,7 @@ export const BatchActionsModal: React.FC<BatchActionsModalProps> = ({
       if (action === 'create_followups') {
         for (const client of selectedClients) {
           const flw: ClientFollowUp = {
-            id: `flw_batch_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            id: generateUUID(),
             client_id: client.id,
             client_name: client.name,
             client_phone: client.whatsapp,

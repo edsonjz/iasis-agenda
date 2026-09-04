@@ -49,6 +49,7 @@ import {
   ClientFollowUp,
   ClientRecoveryLog,
 } from '@/types';
+import { generateUUID, isValidUUID } from './utils';
 
 // Helper for Local Storage persistence keys
 const STORAGE_KEYS = {
@@ -78,6 +79,11 @@ const STORAGE_KEYS = {
   THEME: 'iasis_theme',
 };
 
+function ensureUUID(id?: string | null): string {
+  if (id && isValidUUID(id)) return id;
+  return generateUUID();
+}
+
 function getLocal<T>(key: string, defaultVal: T): T {
   try {
     const item = localStorage.getItem(key);
@@ -106,12 +112,21 @@ export const DataService = {
   },
 
   async saveSettings(settings: BusinessSettings): Promise<BusinessSettings> {
+    const validSettings: BusinessSettings = {
+      ...settings,
+      id: ensureUUID(settings.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.from('business_settings').upsert(settings).select().single();
-      if (!error && data) return data;
+      const { data, error } = await supabase.from('business_settings').upsert(validSettings).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar configurações:', error);
+      } else if (data) {
+        setLocal(STORAGE_KEYS.SETTINGS, data);
+        return data;
+      }
     }
-    setLocal(STORAGE_KEYS.SETTINGS, settings);
-    return settings;
+    setLocal(STORAGE_KEYS.SETTINGS, validSettings);
+    return validSettings;
   },
 
   // Categories
@@ -124,21 +139,23 @@ export const DataService = {
   },
 
   async saveCategory(cat: ServiceCategory): Promise<ServiceCategory> {
+    const validCat: ServiceCategory = {
+      ...cat,
+      id: ensureUUID(cat.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('service_categories').upsert(cat).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('service_categories').upsert(validCat).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar categoria:', error);
+      } else if (data) {
+        validCat.id = data.id;
+      }
     }
     const list = getLocal<ServiceCategory[]>(STORAGE_KEYS.CATEGORIES, initialCategories);
-    const idx = list.findIndex(c => c.id === cat.id);
-    let updated: ServiceCategory[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = cat;
-    } else {
-      updated = [...list, cat];
-    }
+    const idx = list.findIndex(c => c.id === validCat.id);
+    const updated = idx >= 0 ? list.map(c => (c.id === validCat.id ? validCat : c)) : [...list, validCat];
     setLocal(STORAGE_KEYS.CATEGORIES, updated);
-    return cat;
+    return validCat;
   },
 
   // Services
@@ -156,22 +173,24 @@ export const DataService = {
   },
 
   async saveService(service: Service): Promise<Service> {
+    const validService: Service = {
+      ...service,
+      id: ensureUUID(service.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { category, ...cleanService } = service;
-      const { data } = await supabase.from('services').upsert(cleanService).select().single();
-      if (data) return data;
+      const { category, ...cleanService } = validService;
+      const { data, error } = await supabase.from('services').upsert(cleanService).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar serviço:', error);
+      } else if (data) {
+        validService.id = data.id;
+      }
     }
     const list = getLocal<Service[]>(STORAGE_KEYS.SERVICES, initialServices);
-    const idx = list.findIndex(s => s.id === service.id);
-    let updated: Service[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = service;
-    } else {
-      updated = [...list, service];
-    }
+    const idx = list.findIndex(s => s.id === validService.id);
+    const updated = idx >= 0 ? list.map(s => (s.id === validService.id ? validService : s)) : [...list, validService];
     setLocal(STORAGE_KEYS.SERVICES, updated);
-    return service;
+    return validService;
   },
 
   async deleteService(id: string): Promise<boolean> {
@@ -193,21 +212,23 @@ export const DataService = {
   },
 
   async saveProfessional(prof: Professional): Promise<Professional> {
+    const validProf: Professional = {
+      ...prof,
+      id: ensureUUID(prof.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('professionals').upsert(prof).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('professionals').upsert(validProf).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar profissional:', error);
+      } else if (data) {
+        validProf.id = data.id;
+      }
     }
     const list = getLocal<Professional[]>(STORAGE_KEYS.PROFESSIONALS, initialProfessionals);
-    const idx = list.findIndex(p => p.id === prof.id);
-    let updated: Professional[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = prof;
-    } else {
-      updated = [...list, prof];
-    }
+    const idx = list.findIndex(p => p.id === validProf.id);
+    const updated = idx >= 0 ? list.map(p => (p.id === validProf.id ? validProf : p)) : [...list, validProf];
     setLocal(STORAGE_KEYS.PROFESSIONALS, updated);
-    return prof;
+    return validProf;
   },
 
   async deleteProfessional(id: string): Promise<boolean> {
@@ -229,21 +250,23 @@ export const DataService = {
   },
 
   async saveClient(client: Client): Promise<Client> {
+    const validClient: Client = {
+      ...client,
+      id: ensureUUID(client.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('clients').upsert(client).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('clients').upsert(validClient).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar cliente:', error);
+      } else if (data) {
+        validClient.id = data.id;
+      }
     }
     const list = getLocal<Client[]>(STORAGE_KEYS.CLIENTS, initialClients);
-    const idx = list.findIndex(c => c.id === client.id);
-    let updated: Client[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = client;
-    } else {
-      updated = [client, ...list];
-    }
+    const idx = list.findIndex(c => c.id === validClient.id);
+    const updated = idx >= 0 ? list.map(c => (c.id === validClient.id ? validClient : c)) : [validClient, ...list];
     setLocal(STORAGE_KEYS.CLIENTS, updated);
-    return client;
+    return validClient;
   },
 
   async deleteClient(id: string): Promise<boolean> {
@@ -273,7 +296,7 @@ export const DataService = {
           const merged: Client = {
             ...finalClients[existingIdx],
             ...item,
-            id: finalClients[existingIdx].id,
+            id: ensureUUID(finalClients[existingIdx].id),
             name: item.name || finalClients[existingIdx].name,
             whatsapp: item.whatsapp || finalClients[existingIdx].whatsapp,
             updated_at: new Date().toISOString(),
@@ -286,7 +309,7 @@ export const DataService = {
         }
       } else {
         const newClient: Client = {
-          id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b${Date.now().toString(16).padStart(7, '0')}-0000-0000-0000-${Math.random().toString(16).substring(2, 14).padEnd(12, '0')}`,
+          id: ensureUUID(item.id),
           name: item.name || '',
           whatsapp: item.whatsapp || item.phone || '',
           phone: item.phone || item.whatsapp,
@@ -342,22 +365,52 @@ export const DataService = {
   },
 
   async saveAppointment(app: Appointment): Promise<Appointment> {
+    const validId = ensureUUID(app.id);
+    const calculatedFinalPrice = Math.max(0, (app.price || 0) - (app.discount || 0));
+    
+    const validApp: Appointment = {
+      ...app,
+      id: validId,
+      final_price: calculatedFinalPrice,
+    };
+
     if (isSupabaseConfigured && supabase) {
-      const { client, professional, service, ...cleanPayload } = app;
-      const { data } = await supabase.from('appointments').upsert(cleanPayload).select().single();
-      if (data) return data;
+      // Remover final_price (coluna calculada/generated no Postgres) e relacionamentos
+      const { client, professional, service, final_price, ...cleanPayload } = validApp;
+      
+      const { data, error } = await supabase
+        .from('appointments')
+        .upsert(cleanPayload)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Supabase Error] Falha ao salvar agendamento:', error);
+        throw new Error(`Erro ao salvar no banco Supabase: ${error.message}`);
+      }
+      
+      if (data) {
+        const savedApp: Appointment = {
+          ...validApp,
+          ...data,
+          final_price: calculatedFinalPrice,
+          client: app.client,
+          professional: app.professional,
+          service: app.service,
+        };
+        const list = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, initialAppointments);
+        const idx = list.findIndex(a => a.id === savedApp.id);
+        const updated = idx >= 0 ? list.map(a => (a.id === savedApp.id ? savedApp : a)) : [savedApp, ...list];
+        setLocal(STORAGE_KEYS.APPOINTMENTS, updated);
+        return savedApp;
+      }
     }
+
     const list = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, initialAppointments);
-    const idx = list.findIndex(a => a.id === app.id);
-    let updated: Appointment[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = app;
-    } else {
-      updated = [...list, app];
-    }
+    const idx = list.findIndex(a => a.id === validApp.id);
+    const updated = idx >= 0 ? list.map(a => (a.id === validApp.id ? validApp : a)) : [validApp, ...list];
     setLocal(STORAGE_KEYS.APPOINTMENTS, updated);
-    return app;
+    return validApp;
   },
 
   async deleteAppointment(id: string): Promise<boolean> {
@@ -379,21 +432,23 @@ export const DataService = {
   },
 
   async saveTemplate(tpl: NotificationTemplate): Promise<NotificationTemplate> {
+    const validTpl: NotificationTemplate = {
+      ...tpl,
+      id: ensureUUID(tpl.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('notification_templates').upsert(tpl).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('notification_templates').upsert(validTpl).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar template:', error);
+      } else if (data) {
+        validTpl.id = data.id;
+      }
     }
     const list = getLocal<NotificationTemplate[]>(STORAGE_KEYS.TEMPLATES, initialTemplates);
-    const idx = list.findIndex(t => t.id === tpl.id);
-    let updated: NotificationTemplate[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = tpl;
-    } else {
-      updated = [...list, tpl];
-    }
+    const idx = list.findIndex(t => t.id === validTpl.id);
+    const updated = idx >= 0 ? list.map(t => (t.id === validTpl.id ? validTpl : t)) : [...list, validTpl];
     setLocal(STORAGE_KEYS.TEMPLATES, updated);
-    return tpl;
+    return validTpl;
   },
 
   // Anamnesis Templates
@@ -406,21 +461,23 @@ export const DataService = {
   },
 
   async saveAnamnesisTemplate(tpl: AnamnesisTemplate): Promise<AnamnesisTemplate> {
+    const validTpl: AnamnesisTemplate = {
+      ...tpl,
+      id: ensureUUID(tpl.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('anamnesis_templates').upsert(tpl).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('anamnesis_templates').upsert(validTpl).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar template de anamnese:', error);
+      } else if (data) {
+        validTpl.id = data.id;
+      }
     }
     const list = getLocal<AnamnesisTemplate[]>(STORAGE_KEYS.ANAMNESIS_TEMPLATES, initialAnamnesisTemplates);
-    const idx = list.findIndex(t => t.id === tpl.id);
-    let updated: AnamnesisTemplate[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = tpl;
-    } else {
-      updated = [...list, tpl];
-    }
+    const idx = list.findIndex(t => t.id === validTpl.id);
+    const updated = idx >= 0 ? list.map(t => (t.id === validTpl.id ? validTpl : t)) : [...list, validTpl];
     setLocal(STORAGE_KEYS.ANAMNESIS_TEMPLATES, updated);
-    return tpl;
+    return validTpl;
   },
 
   async deleteAnamnesisTemplate(id: string): Promise<boolean> {
@@ -442,21 +499,23 @@ export const DataService = {
   },
 
   async saveAnamnesisRecord(rec: AnamnesisRecord): Promise<AnamnesisRecord> {
+    const validRec: AnamnesisRecord = {
+      ...rec,
+      id: ensureUUID(rec.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('anamnesis_records').upsert(rec).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('anamnesis_records').upsert(validRec).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar registro de anamnese:', error);
+      } else if (data) {
+        validRec.id = data.id;
+      }
     }
     const list = getLocal<AnamnesisRecord[]>(STORAGE_KEYS.ANAMNESIS_RECORDS, initialAnamnesisRecords);
-    const idx = list.findIndex(r => r.id === rec.id);
-    let updated: AnamnesisRecord[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = rec;
-    } else {
-      updated = [rec, ...list];
-    }
+    const idx = list.findIndex(r => r.id === validRec.id);
+    const updated = idx >= 0 ? list.map(r => (r.id === validRec.id ? validRec : r)) : [validRec, ...list];
     setLocal(STORAGE_KEYS.ANAMNESIS_RECORDS, updated);
-    return rec;
+    return validRec;
   },
 
   async deleteAnamnesisRecord(id: string): Promise<boolean> {
@@ -478,21 +537,23 @@ export const DataService = {
   },
 
   async saveProduct(prod: Product): Promise<Product> {
+    const validProd: Product = {
+      ...prod,
+      id: ensureUUID(prod.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('products').upsert(prod).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('products').upsert(validProd).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar produto:', error);
+      } else if (data) {
+        validProd.id = data.id;
+      }
     }
     const list = getLocal<Product[]>(STORAGE_KEYS.PRODUCTS, initialProducts);
-    const idx = list.findIndex(p => p.id === prod.id);
-    let updated: Product[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = prod;
-    } else {
-      updated = [...list, prod];
-    }
+    const idx = list.findIndex(p => p.id === validProd.id);
+    const updated = idx >= 0 ? list.map(p => (p.id === validProd.id ? validProd : p)) : [...list, validProd];
     setLocal(STORAGE_KEYS.PRODUCTS, updated);
-    return prod;
+    return validProd;
   },
 
   async deleteProduct(id: string): Promise<boolean> {
@@ -514,21 +575,23 @@ export const DataService = {
   },
 
   async saveEvolution(evo: TreatmentEvolution): Promise<TreatmentEvolution> {
+    const validEvo: TreatmentEvolution = {
+      ...evo,
+      id: ensureUUID(evo.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('treatment_evolutions').upsert(evo).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('treatment_evolutions').upsert(validEvo).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar evolução:', error);
+      } else if (data) {
+        validEvo.id = data.id;
+      }
     }
     const list = getLocal<TreatmentEvolution[]>(STORAGE_KEYS.EVOLUTIONS, initialEvolutions);
-    const idx = list.findIndex(e => e.id === evo.id);
-    let updated: TreatmentEvolution[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = evo;
-    } else {
-      updated = [evo, ...list];
-    }
+    const idx = list.findIndex(e => e.id === validEvo.id);
+    const updated = idx >= 0 ? list.map(e => (e.id === validEvo.id ? validEvo : e)) : [validEvo, ...list];
     setLocal(STORAGE_KEYS.EVOLUTIONS, updated);
-    return evo;
+    return validEvo;
   },
 
   async deleteEvolution(id: string): Promise<boolean> {
@@ -550,21 +613,23 @@ export const DataService = {
   },
 
   async savePhoto(photo: TreatmentPhoto): Promise<TreatmentPhoto> {
+    const validPhoto: TreatmentPhoto = {
+      ...photo,
+      id: ensureUUID(photo.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('treatment_photos').upsert(photo).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('treatment_photos').upsert(validPhoto).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar foto:', error);
+      } else if (data) {
+        validPhoto.id = data.id;
+      }
     }
     const list = getLocal<TreatmentPhoto[]>(STORAGE_KEYS.PHOTOS, initialPhotos);
-    const idx = list.findIndex(p => p.id === photo.id);
-    let updated: TreatmentPhoto[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = photo;
-    } else {
-      updated = [photo, ...list];
-    }
+    const idx = list.findIndex(p => p.id === validPhoto.id);
+    const updated = idx >= 0 ? list.map(p => (p.id === validPhoto.id ? validPhoto : p)) : [validPhoto, ...list];
     setLocal(STORAGE_KEYS.PHOTOS, updated);
-    return photo;
+    return validPhoto;
   },
 
   async deletePhoto(id: string): Promise<boolean> {
@@ -586,21 +651,25 @@ export const DataService = {
   },
 
   async saveTransaction(tr: FinancialTransaction): Promise<FinancialTransaction> {
+    const validTr: FinancialTransaction = {
+      ...tr,
+      id: ensureUUID(tr.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('financial_transactions').upsert(tr).select().single();
-      if (data) return data;
+      // Remove joined properties if any
+      const { appointment, client, professional, category, ...cleanTr } = validTr as any;
+      const { data, error } = await supabase.from('financial_transactions').upsert(cleanTr).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar transação financeira:', error);
+      } else if (data) {
+        validTr.id = data.id;
+      }
     }
     const list = getLocal<FinancialTransaction[]>(STORAGE_KEYS.TRANSACTIONS, initialTransactions);
-    const idx = list.findIndex(t => t.id === tr.id);
-    let updated: FinancialTransaction[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = tr;
-    } else {
-      updated = [tr, ...list];
-    }
+    const idx = list.findIndex(t => t.id === validTr.id);
+    const updated = idx >= 0 ? list.map(t => (t.id === validTr.id ? validTr : t)) : [validTr, ...list];
     setLocal(STORAGE_KEYS.TRANSACTIONS, updated);
-    return tr;
+    return validTr;
   },
 
   async deleteTransaction(id: string): Promise<boolean> {
@@ -622,21 +691,23 @@ export const DataService = {
   },
 
   async saveCashRegister(cr: CashRegister): Promise<CashRegister> {
+    const validCr: CashRegister = {
+      ...cr,
+      id: ensureUUID(cr.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('cash_registers').upsert(cr).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('cash_registers').upsert(validCr).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar caixa:', error);
+      } else if (data) {
+        validCr.id = data.id;
+      }
     }
     const list = getLocal<CashRegister[]>(STORAGE_KEYS.CASH_REGISTERS, initialCashRegisters);
-    const idx = list.findIndex(c => c.id === cr.id);
-    let updated: CashRegister[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = cr;
-    } else {
-      updated = [cr, ...list];
-    }
+    const idx = list.findIndex(c => c.id === validCr.id);
+    const updated = idx >= 0 ? list.map(c => (c.id === validCr.id ? validCr : c)) : [validCr, ...list];
     setLocal(STORAGE_KEYS.CASH_REGISTERS, updated);
-    return cr;
+    return validCr;
   },
 
   async getCashMovements(): Promise<CashMovement[]> {
@@ -648,14 +719,22 @@ export const DataService = {
   },
 
   async saveCashMovement(cm: CashMovement): Promise<CashMovement> {
+    const validCm: CashMovement = {
+      ...cm,
+      id: ensureUUID(cm.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('cash_movements').upsert(cm).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('cash_movements').upsert(validCm).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar movimentação de caixa:', error);
+      } else if (data) {
+        validCm.id = data.id;
+      }
     }
     const list = getLocal<CashMovement[]>(STORAGE_KEYS.CASH_MOVEMENTS, initialCashMovements);
-    const updated = [cm, ...list];
+    const updated = [validCm, ...list];
     setLocal(STORAGE_KEYS.CASH_MOVEMENTS, updated);
-    return cm;
+    return validCm;
   },
 
   // Packages
@@ -668,21 +747,23 @@ export const DataService = {
   },
 
   async savePackage(pkg: Package): Promise<Package> {
+    const validPkg: Package = {
+      ...pkg,
+      id: ensureUUID(pkg.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('packages').upsert(pkg).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('packages').upsert(validPkg).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar pacote:', error);
+      } else if (data) {
+        validPkg.id = data.id;
+      }
     }
     const list = getLocal<Package[]>(STORAGE_KEYS.PACKAGES, initialPackages);
-    const idx = list.findIndex(p => p.id === pkg.id);
-    let updated: Package[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = pkg;
-    } else {
-      updated = [...list, pkg];
-    }
+    const idx = list.findIndex(p => p.id === validPkg.id);
+    const updated = idx >= 0 ? list.map(p => (p.id === validPkg.id ? validPkg : p)) : [...list, validPkg];
     setLocal(STORAGE_KEYS.PACKAGES, updated);
-    return pkg;
+    return validPkg;
   },
 
   async deletePackage(id: string): Promise<boolean> {
@@ -703,21 +784,23 @@ export const DataService = {
   },
 
   async saveClientPackage(cpkg: ClientPackage): Promise<ClientPackage> {
+    const validCpkg: ClientPackage = {
+      ...cpkg,
+      id: ensureUUID(cpkg.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('client_packages').upsert(cpkg).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('client_packages').upsert(validCpkg).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar pacote da cliente:', error);
+      } else if (data) {
+        validCpkg.id = data.id;
+      }
     }
     const list = getLocal<ClientPackage[]>(STORAGE_KEYS.CLIENT_PACKAGES, initialClientPackages);
-    const idx = list.findIndex(c => c.id === cpkg.id);
-    let updated: ClientPackage[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = cpkg;
-    } else {
-      updated = [cpkg, ...list];
-    }
+    const idx = list.findIndex(c => c.id === validCpkg.id);
+    const updated = idx >= 0 ? list.map(c => (c.id === validCpkg.id ? validCpkg : c)) : [validCpkg, ...list];
     setLocal(STORAGE_KEYS.CLIENT_PACKAGES, updated);
-    return cpkg;
+    return validCpkg;
   },
 
   async deleteClientPackage(id: string): Promise<boolean> {
@@ -739,21 +822,23 @@ export const DataService = {
   },
 
   async savePromotion(promo: Promotion): Promise<Promotion> {
+    const validPromo: Promotion = {
+      ...promo,
+      id: ensureUUID(promo.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('promotions').upsert(promo).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('promotions').upsert(validPromo).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar promoção:', error);
+      } else if (data) {
+        validPromo.id = data.id;
+      }
     }
     const list = getLocal<Promotion[]>(STORAGE_KEYS.PROMOTIONS, initialPromotions);
-    const idx = list.findIndex(p => p.id === promo.id);
-    let updated: Promotion[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = promo;
-    } else {
-      updated = [...list, promo];
-    }
+    const idx = list.findIndex(p => p.id === validPromo.id);
+    const updated = idx >= 0 ? list.map(p => (p.id === validPromo.id ? validPromo : p)) : [...list, validPromo];
     setLocal(STORAGE_KEYS.PROMOTIONS, updated);
-    return promo;
+    return validPromo;
   },
 
   async deletePromotion(id: string): Promise<boolean> {
@@ -775,21 +860,23 @@ export const DataService = {
   },
 
   async saveLoyaltyAccount(acc: LoyaltyAccount): Promise<LoyaltyAccount> {
+    const validAcc: LoyaltyAccount = {
+      ...acc,
+      id: ensureUUID(acc.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('loyalty_accounts').upsert(acc).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('loyalty_accounts').upsert(validAcc).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar conta fidelidade:', error);
+      } else if (data) {
+        validAcc.id = data.id;
+      }
     }
     const list = getLocal<LoyaltyAccount[]>(STORAGE_KEYS.LOYALTY_ACCOUNTS, initialLoyaltyAccounts);
-    const idx = list.findIndex(a => a.id === acc.id);
-    let updated: LoyaltyAccount[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = acc;
-    } else {
-      updated = [acc, ...list];
-    }
+    const idx = list.findIndex(a => a.id === validAcc.id);
+    const updated = idx >= 0 ? list.map(a => (a.id === validAcc.id ? validAcc : a)) : [validAcc, ...list];
     setLocal(STORAGE_KEYS.LOYALTY_ACCOUNTS, updated);
-    return acc;
+    return validAcc;
   },
 
   // Commissions
@@ -802,26 +889,26 @@ export const DataService = {
   },
 
   async saveCommission(com: CommissionRecord): Promise<CommissionRecord> {
+    const validCom: CommissionRecord = {
+      ...com,
+      id: ensureUUID(com.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('commission_records').upsert(com).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('commission_records').upsert(validCom).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar comissão:', error);
+      } else if (data) {
+        validCom.id = data.id;
+      }
     }
     const list = getLocal<CommissionRecord[]>(STORAGE_KEYS.COMMISSIONS, initialCommissions);
-    const idx = list.findIndex(c => c.id === com.id);
-    let updated: CommissionRecord[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = com;
-    } else {
-      updated = [com, ...list];
-    }
+    const idx = list.findIndex(c => c.id === validCom.id);
+    const updated = idx >= 0 ? list.map(c => (c.id === validCom.id ? validCom : c)) : [validCom, ...list];
     setLocal(STORAGE_KEYS.COMMISSIONS, updated);
-    return com;
+    return validCom;
   },
 
-  // ==========================================
   // CRM CONFIG & FOLLOW-UPS
-  // ==========================================
   async getCRMConfig(): Promise<CRMConfig> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('crm_settings').select('*').limit(1).single();
@@ -831,12 +918,21 @@ export const DataService = {
   },
 
   async saveCRMConfig(cfg: CRMConfig): Promise<CRMConfig> {
+    const validCfg: CRMConfig = {
+      ...cfg,
+      id: ensureUUID(cfg.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.from('crm_settings').upsert(cfg).select().single();
-      if (!error && data) return data;
+      const { data, error } = await supabase.from('crm_settings').upsert(validCfg).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar CRM config:', error);
+      } else if (data) {
+        setLocal(STORAGE_KEYS.CRM_CONFIG, data);
+        return data;
+      }
     }
-    setLocal(STORAGE_KEYS.CRM_CONFIG, cfg);
-    return cfg;
+    setLocal(STORAGE_KEYS.CRM_CONFIG, validCfg);
+    return validCfg;
   },
 
   async getFollowUps(): Promise<ClientFollowUp[]> {
@@ -848,21 +944,23 @@ export const DataService = {
   },
 
   async saveFollowUp(flw: ClientFollowUp): Promise<ClientFollowUp> {
+    const validFlw: ClientFollowUp = {
+      ...flw,
+      id: ensureUUID(flw.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('client_follow_ups').upsert(flw).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('client_follow_ups').upsert(validFlw).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar follow-up:', error);
+      } else if (data) {
+        validFlw.id = data.id;
+      }
     }
     const list = getLocal<ClientFollowUp[]>(STORAGE_KEYS.FOLLOW_UPS, initialFollowUps);
-    const idx = list.findIndex(f => f.id === flw.id);
-    let updated: ClientFollowUp[];
-    if (idx >= 0) {
-      updated = [...list];
-      updated[idx] = flw;
-    } else {
-      updated = [flw, ...list];
-    }
+    const idx = list.findIndex(f => f.id === validFlw.id);
+    const updated = idx >= 0 ? list.map(f => (f.id === validFlw.id ? validFlw : f)) : [validFlw, ...list];
     setLocal(STORAGE_KEYS.FOLLOW_UPS, updated);
-    return flw;
+    return validFlw;
   },
 
   async deleteFollowUp(id: string): Promise<boolean> {
@@ -883,13 +981,21 @@ export const DataService = {
   },
 
   async saveRecoveryLog(log: ClientRecoveryLog): Promise<ClientRecoveryLog> {
+    const validLog: ClientRecoveryLog = {
+      ...log,
+      id: ensureUUID(log.id),
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase.from('client_recovery_logs').upsert(log).select().single();
-      if (data) return data;
+      const { data, error } = await supabase.from('client_recovery_logs').upsert(validLog).select().single();
+      if (error) {
+        console.error('[Supabase] Erro ao salvar histórico de recuperação:', error);
+      } else if (data) {
+        validLog.id = data.id;
+      }
     }
     const list = getLocal<ClientRecoveryLog[]>(STORAGE_KEYS.RECOVERY_LOGS, initialRecoveryLogs);
-    const updated = [log, ...list];
+    const updated = [validLog, ...list];
     setLocal(STORAGE_KEYS.RECOVERY_LOGS, updated);
-    return log;
+    return validLog;
   },
 };

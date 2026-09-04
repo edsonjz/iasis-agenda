@@ -5,6 +5,7 @@ import { Input } from '../common/Input';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Professional } from '@/types';
+import { generateUUID } from '@/lib/utils';
 
 interface ProfessionalModalProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export const ProfessionalModal: React.FC<ProfessionalModalProps> = ({
         .filter(Boolean);
 
       const profData: Professional = {
-        id: professional?.id || Math.random().toString(36).substring(2, 9),
+        id: professional?.id || generateUUID(),
         name: name.trim(),
         nickname: nickname.trim() || undefined,
         email: email.trim() || undefined,

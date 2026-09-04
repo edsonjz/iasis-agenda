@@ -6,6 +6,7 @@ import { Select } from '../common/Select';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Service } from '@/types';
+import { generateUUID } from '@/lib/utils';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -63,7 +64,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, ser
     try {
       setIsSubmitting(true);
       const serviceData: Service = {
-        id: service?.id || Math.random().toString(36).substring(2, 9),
+        id: service?.id || generateUUID(),
         name: name.trim(),
         category_id: categoryId || undefined,
         description: description.trim() || undefined,
