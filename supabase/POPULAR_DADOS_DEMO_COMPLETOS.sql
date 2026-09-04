@@ -1,5 +1,5 @@
 ﻿-- ==============================================================================
--- 🌸 IASIS AGENDA - POPULAR DADOS DEMONSTRATIVOS (DDD 51 & UUIDs 100% VÁLIDOS)
+-- 🌸 IASIS AGENDA - POPULAR DADOS DEMONSTRATIVOS (DDD 51 & UUIDs VÁLIDOS)
 -- ==============================================================================
 
 -- 1. CLIENTES DEMONSTRATIVOS (DDD 51 - RS)
@@ -384,7 +384,7 @@ ON CONFLICT (client_id) DO NOTHING;
 
 -- 8. FOLLOW-UPS & CRM RETENÇÃO
 INSERT INTO client_follow_ups (
-  id, client_id, client_name, client_phone, type, reason, recommended_date, assigned_to_name, status, recommended_message
+  id, client_id, client_name, client_phone, type, reason, recommended_date, assigned_to_name, status, notes, generated_message
 ) VALUES
   (
     'cd100000-0000-0000-0000-000000000001',
@@ -396,6 +396,7 @@ INSERT INTO client_follow_ups (
     CURRENT_DATE,
     'Beatriz Lima',
     'pending',
+    'Verificar sensibilidade',
     'Olá Fernanda! Como está se sentindo após a limpeza de ontem? Sua pele ficou calma? Lembre-se de beber bastante água e usar protetor solar! ✨'
   ),
   (
@@ -408,6 +409,7 @@ INSERT INTO client_follow_ups (
     CURRENT_DATE,
     'Juliana Santos',
     'pending',
+    'Intervalo habitual de 25 dias excedido',
     'Oi Rê! Sentimos sua falta aqui no estúdio! Seus cílios já devem estar precisando de um retoque. Vamos garantir um horário para você nesta semana?'
   ),
   (
@@ -420,6 +422,7 @@ INSERT INTO client_follow_ups (
     CURRENT_DATE,
     'Jaque Souza',
     'pending',
+    'Campanha de reconquista',
     'Olá Juliana! Temos um presente especial de 15% de desconto para sua próxima visita. Que tal agendarmos uma sessão de autocuidado? 💕'
   )
 ON CONFLICT (id) DO NOTHING;
