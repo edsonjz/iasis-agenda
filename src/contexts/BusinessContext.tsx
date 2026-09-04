@@ -26,7 +26,7 @@ import {
   ClientFollowUp,
   ClientRecoveryLog,
 } from '@/types';
-import { DataService } from '@/lib/storage';
+import { DataService, DEMO_IDS } from '@/lib/storage';
 import { defaultCRMConfig, calculateClientMetrics } from '@/lib/crmEngine';
 import { isSameDay, parseISO, isThisMonth, differenceInDays, format } from 'date-fns';
 import { generateUUID } from '@/lib/utils';
@@ -58,6 +58,7 @@ interface BusinessContextType {
   metrics: DashboardMetrics;
   loading: boolean;
   refreshData: () => Promise<void>;
+  purgeDemoData: () => Promise<void>;
   
   // Core Mutations & Deletions
   saveSettings: (settings: BusinessSettings) => Promise<void>;
@@ -204,10 +205,33 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         DataService.getRecoveryLogs(),
       ]);
 
+      // Automatically purge any remaining demo records in Supabase and cache
+      await DataService.purgeDemoData();
+
+      // Ensure Jaque Souza exists as the active professional
+      let finalProfs = profs.filter(p => !DEMO_IDS.PROFESSIONALS.includes(p.id) && !DEMO_IDS.PROFESSIONAL_NAMES.includes(p.name));
+      const hasJaque = finalProfs.some(p => p.name.toLowerCase().includes('jaque'));
+      if (!hasJaque) {
+        const jaqueProf: Professional = {
+          id: 'a0000000-0000-0000-0000-000000000002',
+          name: 'Jaque Souza',
+          nickname: 'Jaque',
+          email: 'studiojaquesouza@gmail.com',
+          phone: '(11) 98765-4321',
+          color: '#bf3f57',
+          specialties: ['Estética Avançada', 'Micropigmentação', 'Extensão de Cílios', 'Tratamentos Faciais'],
+          commission_type: 'percentage',
+          default_commission_rate: 100,
+          active: true,
+        };
+        await DataService.saveProfessional(jaqueProf);
+        finalProfs = [jaqueProf, ...finalProfs];
+      }
+
       setSettings(sett);
       setCategories(cats);
       setServices(servs);
-      setProfessionals(profs);
+      setProfessionals(finalProfs);
       setClients(cls);
       setAppointments(apps);
       setTemplates(tpls);
@@ -843,6 +867,18 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [appointments, clients, crmConfig, anamnesisRecords, followUps, recoveryLogs]);
 
+  const handlePurgeDemoData = async () => {
+    try {
+      setLoading(true);
+      await DataService.purgeDemoData();
+      await loadAll();
+    } catch (err) {
+      console.error('Erro ao purgar dados demo:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <BusinessContext.Provider
       value={{
@@ -914,6 +950,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         saveCRMConfig: handleSaveCRMConfig,
         saveFollowUp: handleSaveFollowUp,
         deleteFollowUp: handleDeleteFollowUp,
+        purgeDemoData: handlePurgeDemoData,
       }}
     >
       {children}

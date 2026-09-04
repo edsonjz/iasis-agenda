@@ -25,11 +25,12 @@ import {
   Lock,
   KeyRound,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Trash2
 } from 'lucide-react';
 
 export const Configuracoes: React.FC = () => {
-  const { settings, saveSettings, crmConfig, saveCRMConfig } = useBusiness();
+  const { settings, saveSettings, crmConfig, saveCRMConfig, purgeDemoData } = useBusiness();
   const { user, profile, updateProfile, changePassword } = useAuth();
   const { success, error: toastError } = useToast();
 
@@ -285,6 +286,33 @@ export const Configuracoes: React.FC = () => {
                 </p>
               </div>
             </div>
+          </Card>
+
+          {/* Purge Demo Data Card */}
+          <Card className="p-4 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4 text-rose-600" /> Limpeza de Dados Fictícios do Banco
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Remove em definitivo todas as profissionais, clientes e agendamentos fictícios inseridos como demonstração.
+                <strong className="text-slate-700 dark:text-slate-300"> Seus clientes importados via Excel são 100% preservados.</strong>
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (window.confirm('Deseja realmente limpar todos os dados fictícios de teste? Clientes importados por Excel serão mantidos e Jaque Souza permanecerá como única profissional.')) {
+                  await purgeDemoData();
+                  success('Dados fictícios removidos com sucesso do sistema e do banco!');
+                }
+              }}
+              className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900/40 dark:hover:bg-rose-950/30 shrink-0 font-bold text-xs"
+            >
+              Limpar Dados Fictícios Agora
+            </Button>
           </Card>
 
           {/* Clinic Identity */}
