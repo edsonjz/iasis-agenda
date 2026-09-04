@@ -67,6 +67,7 @@ interface BusinessContextType {
   deleteProfessional: (id: string) => Promise<void>;
   saveClient: (client: Client) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  importClientsBatch: (clientsToSave: Partial<Client>[], updateDuplicates?: boolean) => Promise<{ created: number; updated: number }>;
   saveAppointment: (app: Appointment) => Promise<void>;
   deleteAppointment: (id: string) => Promise<void>;
   saveTemplate: (tpl: NotificationTemplate) => Promise<void>;
@@ -310,6 +311,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const handleDeleteClient = async (id: string) => {
     await DataService.deleteClient(id);
     setClients(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleImportClientsBatch = async (clientsToSave: Partial<Client>[], updateDuplicates: boolean = true) => {
+    const res = await DataService.saveBatchClients(clientsToSave, updateDuplicates);
+    setClients(res.savedClients);
+    return { created: res.created, updated: res.updated };
   };
 
   // Appointments
@@ -872,6 +879,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteProfessional: handleDeleteProfessional,
         saveClient: handleSaveClient,
         deleteClient: handleDeleteClient,
+        importClientsBatch: handleImportClientsBatch,
         saveAppointment: handleSaveAppointment,
         deleteAppointment: handleDeleteAppointment,
         saveTemplate: handleSaveTemplate,

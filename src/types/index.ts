@@ -138,6 +138,7 @@ export interface Client {
   total_spent: number;
   active: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 export type AppointmentStatus =

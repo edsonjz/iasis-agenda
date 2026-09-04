@@ -6,6 +6,7 @@ import { Badge } from '@/components/common/Badge';
 import { ClientModal } from '@/components/clients/ClientModal';
 import { ClientProfileDrawer } from '@/components/clients/ClientProfileDrawer';
 import { AppointmentModal } from '@/components/agenda/AppointmentModal';
+import { ClientExcelModal } from '@/components/clients/ClientExcelModal';
 import { formatCurrency, formatPhone, getWhatsAppUrl } from '@/lib/utils';
 import { formatDateBR } from '@/lib/dateUtils';
 import { Client } from '@/types';
@@ -20,16 +21,20 @@ import {
   Tag,
   Calendar,
   Sparkles,
-  Phone
+  Phone,
+  FileSpreadsheet,
+  Download,
+  Upload
 } from 'lucide-react';
 
 export const Clientes: React.FC = () => {
-  const { clients } = useBusiness();
+  const { clients, importClientsBatch } = useBusiness();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -88,16 +93,27 @@ export const Clientes: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          size="sm"
-          onClick={() => {
-            setSelectedClient(null);
-            setIsModalOpen(true);
-          }}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          Nova Cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExcelModalOpen(true)}
+            icon={<FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+          >
+            Importar / Exportar Excel
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => {
+              setSelectedClient(null);
+              setIsModalOpen(true);
+            }}
+            icon={<Plus className="w-4 h-4" />}
+          >
+            Nova Cliente
+          </Button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -268,6 +284,14 @@ export const Clientes: React.FC = () => {
       <AppointmentModal
         isOpen={isAppointmentModalOpen}
         onClose={() => setIsAppointmentModalOpen(false)}
+      />
+
+      {/* Excel Import / Export Modal */}
+      <ClientExcelModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        clients={clients}
+        onImportBatch={importClientsBatch}
       />
     </div>
   );

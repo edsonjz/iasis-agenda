@@ -255,6 +255,70 @@ export const DataService = {
     return true;
   },
 
+  async saveBatchClients(clientsToSave: Partial<Client>[], updateDuplicates: boolean = true): Promise<{ created: number; updated: number; savedClients: Client[] }> {
+    const existingList = await this.getClients();
+    let createdCount = 0;
+    let updatedCount = 0;
+    const finalClients: Client[] = [...existingList];
+
+    for (const item of clientsToSave) {
+      const cleanPhone = (item.whatsapp || item.phone || '').replace(/\D/g, '');
+      const existingIdx = finalClients.findIndex(c => {
+        const cPhone = (c.whatsapp || c.phone || '').replace(/\D/g, '');
+        return (cPhone && cleanPhone && cPhone === cleanPhone) || (c.name.toLowerCase().trim() === (item.name || '').toLowerCase().trim());
+      });
+
+      if (existingIdx >= 0) {
+        if (updateDuplicates) {
+          const merged: Client = {
+            ...finalClients[existingIdx],
+            ...item,
+            id: finalClients[existingIdx].id,
+            name: item.name || finalClients[existingIdx].name,
+            whatsapp: item.whatsapp || finalClients[existingIdx].whatsapp,
+            updated_at: new Date().toISOString(),
+          };
+          if (isSupabaseConfigured && supabase) {
+            await supabase.from('clients').upsert(merged);
+          }
+          finalClients[existingIdx] = merged;
+          updatedCount++;
+        }
+      } else {
+        const newClient: Client = {
+          id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b${Date.now().toString(16).padStart(7, '0')}-0000-0000-0000-${Math.random().toString(16).substring(2, 14).padEnd(12, '0')}`,
+          name: item.name || '',
+          whatsapp: item.whatsapp || item.phone || '',
+          phone: item.phone || item.whatsapp,
+          nickname: item.nickname,
+          email: item.email,
+          cpf: item.cpf,
+          birth_date: item.birth_date,
+          address: item.address,
+          city: item.city,
+          state: item.state,
+          how_did_you_find_us: item.how_did_you_find_us,
+          allow_contact: item.allow_contact ?? true,
+          tags: item.tags || [],
+          notes: item.notes,
+          total_appointments: 0,
+          total_spent: 0,
+          active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        if (isSupabaseConfigured && supabase) {
+          await supabase.from('clients').insert(newClient);
+        }
+        finalClients.unshift(newClient);
+        createdCount++;
+      }
+    }
+
+    setLocal(STORAGE_KEYS.CLIENTS, finalClients);
+    return { created: createdCount, updated: updatedCount, savedClients: finalClients };
+  },
+
   // Appointments
   async getAppointments(): Promise<Appointment[]> {
     if (isSupabaseConfigured && supabase) {
