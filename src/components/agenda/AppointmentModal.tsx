@@ -3,6 +3,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
+import { ClientSearchCombobox } from '../common/ClientSearchCombobox';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Appointment, AppointmentStatus, PaymentMethod } from '@/types';
@@ -257,16 +258,17 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
           </div>
 
           {isQuickClientOpen ? (
-            <div className="p-3.5 mb-3 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/30 space-y-3">
+            <div className="p-3.5 mb-3 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/30 space-y-3 animate-in fade-in duration-150">
               <div className="text-xs font-bold text-rose-800 dark:text-rose-200">Cadastro Rápido de Cliente</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input
-                  placeholder="Nome completo"
+                  placeholder="Nome completo da cliente"
                   value={newClientName}
                   onChange={e => setNewClientName(e.target.value)}
+                  autoFocus
                 />
                 <Input
-                  placeholder="WhatsApp (ex: 11987654321)"
+                  placeholder="WhatsApp (ex: 51998765432)"
                   value={newClientWhatsApp}
                   onChange={e => setNewClientWhatsApp(e.target.value)}
                 />
@@ -281,18 +283,16 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               </div>
             </div>
           ) : (
-            <Select
-              value={clientId}
-              onChange={e => setClientId(e.target.value)}
+            <ClientSearchCombobox
+              clients={clients}
+              selectedClientId={clientId}
+              onSelectClient={(selected) => setClientId(selected ? selected.id : '')}
+              onOpenQuickCreate={(initialName) => {
+                if (initialName) setNewClientName(initialName);
+                setIsQuickClientOpen(true);
+              }}
               required
-            >
-              <option value="">Selecione uma cliente...</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name} — {c.whatsapp}
-                </option>
-              ))}
-            </Select>
+            />
           )}
         </div>
 

@@ -3,6 +3,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
+import { ClientSearchCombobox } from '../common/ClientSearchCombobox';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { ClientPackage, PaymentMethod } from '@/types';
@@ -95,18 +96,17 @@ export const SellPackageModal: React.FC<SellPackageModalProps> = ({
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Select
-          label="Cliente Compradora"
-          value={clientId}
-          onChange={e => setClientId(e.target.value)}
-          required
-        >
-          {clients.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.name} ({c.whatsapp})
-            </option>
-          ))}
-        </Select>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+            Cliente Compradora <span className="text-rose-500">*</span>
+          </label>
+          <ClientSearchCombobox
+            clients={clients}
+            selectedClientId={clientId}
+            onSelectClient={(c) => setClientId(c ? c.id : '')}
+            required
+          />
+        </div>
 
         <Select
           label="Pacote Contratado"
