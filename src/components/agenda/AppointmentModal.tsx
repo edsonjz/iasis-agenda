@@ -7,11 +7,20 @@ import { ClientSearchCombobox } from '../common/ClientSearchCombobox';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
 import { Appointment, AppointmentStatus, PaymentMethod } from '@/types';
-import { checkScheduleConflict, formatTimeBR, formatDateBR, calculateEndTimeFormatted } from '@/lib/dateUtils';
+import {
+  checkScheduleConflict,
+  formatTimeBR,
+  formatDateBR,
+  calculateEndTimeFormatted,
+  combineDateAndTime,
+  toISOStringFromLocal,
+  getLocalDateString,
+  getLocalTimeString,
+} from '@/lib/dateUtils';
 import { formatCurrency, getWhatsAppUrl, generateUUID } from '@/lib/utils';
 import { APPOINTMENT_STATUS_MAP, PAYMENT_METHODS_MAP } from '@/lib/constants';
-import { AlertCircle, Plus, Copy, Calendar, Clock, DollarSign, User, Sparkles, MessageCircle } from 'lucide-react';
-import { format, parseISO, addMinutes } from 'date-fns';
+import { AlertCircle, Plus, Copy, Clock, MessageCircle, ExternalLink } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 interface AppointmentModalProps {
   isOpen: boolean;
@@ -29,7 +38,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   initialProfessionalId,
 }) => {
   const { clients, services, professionals, appointments, saveAppointment, deleteAppointment, saveClient, settings } = useBusiness();
-  const { success, error: toastError, warning } = useToast();
+  const { success, error: toastError } = useToast();
 
   const [clientId, setClientId] = useState('');
   const [professionalId, setProfessionalId] = useState('');
@@ -58,10 +67,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setClientId(appointment.client_id);
       setProfessionalId(appointment.professional_id);
       setServiceId(appointment.service_id);
-      const appStart = parseISO(appointment.start_time);
-      setDate(format(appStart, 'yyyy-MM-dd'));
-      setTime(format(appStart, 'HH:mm'));
-      setDurationMinutes(appointment.duration_minutes);
+      setDate(getLocalDateString(appointment.start_time));
+      setTime(getLocalTimeString(appointment.start_time));
+      setDurationMinutes(appointment.duration_minutes || 60);
       setStatus(appointment.status);
       setPrice(appointment.price);
       setDiscount(appointment.discount || 0);
@@ -74,20 +82,27 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setInternalNotes(appointment.internal_notes || '');
     } else {
       const defaultDate = initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+      const defaultTime = initialDate ? format(initialDate, 'HH:mm') : '09:00';
       setDate(defaultDate);
-      setTime('09:00');
+      setTime(defaultTime);
       setClientId(clients[0]?.id || '');
       setProfessionalId(initialProfessionalId || professionals[0]?.id || '');
       const firstService = services[0];
       if (firstService) {
         setServiceId(firstService.id);
-        setDurationMinutes(firstService.duration_minutes);
-        setPrice(firstService.promotional_price || firstService.price);
+        setDurationMinutes(firstService.duration_minutes || 60);
+        setPrice(firstService.promotional_price || firstService.price || 0);
       }
       setStatus('scheduled');
       setDiscount(0);
-      setDepositRequested(settings?.require_deposit_by_default || false);
-      setDepositAmount(settings?.default_deposit_fixed_amount || 50);
+      const isDepositDefault = settings?.require_deposit_by_default || false;
+      setDepositRequested(isDepositDefault);
+      const baseP = firstService ? (firstService.promotional_price || firstService.price || 0) : 0;
+      if (isDepositDefault && settings?.default_deposit_percentage) {
+        setDepositAmount((baseP * settings.default_deposit_percentage) / 100);
+      } else {
+        setDepositAmount(settings?.default_deposit_fixed_amount || 50);
+      }
       setDepositPaid(false);
       setPaymentMethod('pix');
       setPaymentStatus('pending');
@@ -120,7 +135,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   // Conflict Detection with Buffer & Enriched Details
   const conflictInfo = useMemo(() => {
     if (!date || !time || !professionalId || !durationMinutes) return { hasConflict: false };
-    const startDateTime = `${date}T${time}:00`;
+    const startDateTime = combineDateAndTime(date, time);
     return checkScheduleConflict({
       professionalId,
       startDateTime,
@@ -141,8 +156,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     }
     const newClient = {
       id: generateUUID(),
-      name: newClientName,
+      name: newClientName.trim(),
       whatsapp: newClientWhatsApp.replace(/\D/g, ''),
+      phone: newClientWhatsApp.replace(/\D/g, ''),
       allow_contact: true,
       tags: ['Nova cliente'],
       total_appointments: 0,
@@ -179,24 +195,25 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      const startDateTime = `${date}T${time}:00`;
-      const startIso = parseISO(startDateTime);
-      const endIso = addMinutes(startIso, durationMinutes);
+      const startLocal = combineDateAndTime(date, time);
+      const endLocal = new Date(startLocal.getTime() + durationMinutes * 60000);
+      const startIso = startLocal.toISOString();
+      const endIso = endLocal.toISOString();
 
       const appData: Appointment = {
         id: appointment?.id || generateUUID(),
         client_id: clientId,
         professional_id: professionalId,
         service_id: serviceId,
-        start_time: format(startIso, "yyyy-MM-dd'T'HH:mm:ss"),
-        end_time: format(endIso, "yyyy-MM-dd'T'HH:mm:ss"),
+        start_time: startIso,
+        end_time: endIso,
         duration_minutes: durationMinutes,
         status,
         price,
         discount,
         final_price: finalPrice,
         deposit_requested: depositRequested,
-        deposit_amount: depositAmount,
+        deposit_amount: depositRequested ? depositAmount : 0,
         deposit_paid: depositPaid,
         payment_method: paymentMethod,
         payment_status: paymentStatus,
@@ -206,26 +223,52 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       };
 
       await saveAppointment(appData);
-      success(appointment ? 'Agendamento atualizado!' : 'Agendamento criado com sucesso!');
+      success(appointment ? 'Agendamento atualizado com sucesso!' : 'Agendamento criado e salvo com sucesso!');
       onClose();
-    } catch (err) {
-      console.error(err);
-      toastError('Não foi possível salvar o agendamento. Verifique os dados e tente novamente.');
+    } catch (err: any) {
+      console.error('Erro ao salvar agendamento:', err);
+      toastError(err?.message || 'Não foi possível salvar o agendamento. Verifique a conexão e tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Copy WhatsApp Confirmation
-  const handleCopyConfirmation = () => {
+  // Build WhatsApp Confirmation Message with Deposit and Pix Info
+  const buildWhatsAppMessage = (): string => {
     const targetClient = clients.find(c => c.id === clientId);
     const targetService = services.find(s => s.id === serviceId);
     const targetProf = professionals.find(p => p.id === professionalId);
+    const businessName = settings?.trade_name || settings?.name || 'IASIS Estética Avançada';
+    const pixKey = settings?.pix_key || 'studiojaquesouza@gmail.com';
+    const pixType = settings?.pix_type ? ` (${settings.pix_type})` : '';
 
-    const msg = `Olá, ${targetClient?.name || 'Cliente'}! Tudo bem? 😊\n\nConfirmando seu atendimento no *IASIS AGENDA*:\n📅 Data: ${formatDateBR(date)}\n⏰ Horário: ${time}\n💅 Serviço: ${targetService?.name}\n👩‍⚕️ Profissional: ${targetProf?.nickname || targetProf?.name}\n💰 Valor: ${formatCurrency(finalPrice)}\n\nNos vemos em breve! ✨`;
+    let msg = `Olá, *${targetClient?.name || 'Cliente'}*! Tudo bem? 😊\n\nConfirmando seu agendamento no *${businessName}*:\n📅 *Data:* ${formatDateBR(date)}\n⏰ *Horário:* ${time}\n💅 *Procedimento:* ${targetService?.name || 'Procedimento'}\n👩‍⚕️ *Profissional:* ${targetProf?.nickname || targetProf?.name || 'Profissional'}\n💰 *Valor Total:* ${formatCurrency(finalPrice)}`;
 
+    if (depositRequested && depositAmount > 0) {
+      msg += `\n\n📌 *SINAL DE RESERVA OBRIGATÓRIO*:\nPara confirmar e garantir seu horário na agenda, solicitamos o pagamento do sinal de reserva:\n💵 *Valor do Sinal:* ${formatCurrency(depositAmount)}\n🔑 *Chave PIX:* ${pixKey}${pixType}\n🏦 *Favorecido:* ${businessName}\n\n⚠️ _Por favor, nos envie o comprovante do PIX por aqui para finalizarmos a reserva do seu horário! O valor pago será abatido no total do seu procedimento._ 💕`;
+    } else {
+      msg += `\n\nNos vemos em breve! Caso precise reagendar, avise-nos com antecedência. ✨`;
+    }
+
+    return msg;
+  };
+
+  const handleCopyConfirmation = () => {
+    const msg = buildWhatsAppMessage();
     navigator.clipboard.writeText(msg);
-    success('Mensagem de confirmação copiada!');
+    success('Mensagem com dados de agendamento e PIX copiada!');
+  };
+
+  const handleSendWhatsApp = () => {
+    const targetClient = clients.find(c => c.id === clientId);
+    const phone = targetClient?.whatsapp || targetClient?.phone;
+    if (!phone) {
+      toastError('Esta cliente não possui número de WhatsApp cadastrado');
+      return;
+    }
+    const msg = buildWhatsAppMessage();
+    const url = getWhatsAppUrl(phone, msg);
+    window.open(url, '_blank');
   };
 
   return (
@@ -249,7 +292,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 {conflictInfo.details || 'Esta profissional já possui outro atendimento agendado que colide com este período.'}
               </p>
               <p className="text-[11px] text-rose-700 dark:text-rose-400 font-semibold pt-1">
-                🔒 Para garantir que não haja atendimentos cruzados, escolha outro horário ou selecione outra profissional disponível.
+                🔒 Para evitar agendamentos sobrepostos ou horários duplicados, escolha outro horário ou selecione outra profissional disponível.
               </p>
             </div>
           </div>
@@ -378,7 +421,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               <div className="flex items-center gap-2">
                 <Clock className={`w-4 h-4 shrink-0 ${conflictInfo.hasConflict ? 'text-rose-600' : 'text-emerald-600'}`} />
                 <span>
-                  <strong>Período Reservado na Agenda:</strong> das <span className="font-bold underline">{time}</span> às <span className="font-bold underline">{endTimeFormatted}</span> ({durationMinutes} min)
+                  <strong>Período Bloqueado na Agenda:</strong> das <span className="font-bold underline">{time}</span> às <span className="font-bold underline">{endTimeFormatted}</span> ({durationMinutes} min)
                   {bufferMinutes > 0 && (
                     <span className="font-medium text-slate-500"> + {bufferMinutes}min intervalo</span>
                   )}
@@ -389,7 +432,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                   ? 'bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-100'
                   : 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100'
               }`}>
-                {conflictInfo.hasConflict ? '⚠️ Horário Ocupado' : '✅ Horário Livre e Bloqueado'}
+                {conflictInfo.hasConflict ? '⚠️ Choque de Horário' : '✅ Horário Livre'}
               </span>
             </div>
           )}
@@ -470,10 +513,12 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 onChange={e => setDepositRequested(e.target.checked)}
                 className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
               />
-              Solicitar Sinal de Reserva
+              Solicitar Sinal de Reserva (PIX Antecipado)
             </label>
             {depositRequested && (
-              <span className="text-[11px] text-slate-500">Chave PIX: {settings?.pix_key || 'pix@iasisagenda.com.br'}</span>
+              <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                PIX: {settings?.pix_key || 'studiojaquesouza@gmail.com'}
+              </span>
             )}
           </div>
 
@@ -531,7 +576,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
         {/* Actions Bottom Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {appointment && (
               <Button
                 type="button"
@@ -540,7 +585,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 onClick={async () => {
                   if (confirm('Deseja excluir este agendamento?')) {
                     await deleteAppointment(appointment.id);
-                    success('Agendamento excluído');
+                    success('Agendamento excluído com sucesso');
                     onClose();
                   }
                 }}
@@ -554,8 +599,20 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               size="sm"
               onClick={handleCopyConfirmation}
               icon={<Copy className="w-3.5 h-3.5" />}
+              title="Copiar texto de confirmação com dados do PIX e sinal"
             >
-              Copiar Msg WhatsApp
+              Copiar Msg PIX
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSendWhatsApp}
+              icon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600" />}
+              className="text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+              title="Abrir conversa no WhatsApp com texto pronto"
+            >
+              Abrir WhatsApp
             </Button>
           </div>
 
@@ -568,10 +625,10 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               size="sm"
               loading={isSubmitting}
               disabled={conflictInfo.hasConflict}
-              className={conflictInfo.hasConflict ? 'opacity-60 cursor-not-allowed bg-slate-400 hover:bg-slate-400 text-white' : ''}
+              className={conflictInfo.hasConflict ? 'opacity-60 cursor-not-allowed bg-rose-700 hover:bg-rose-700 text-white' : ''}
             >
               {conflictInfo.hasConflict
-                ? '⛔ Horário Ocupado'
+                ? '⛔ Horário Indisponível'
                 : appointment
                 ? 'Salvar Alterações'
                 : 'Confirmar Agendamento'}

@@ -50,6 +50,44 @@ export function getMonthYearName(date: string | Date): string {
 }
 
 /**
+ * Combina uma data (YYYY-MM-DD) e um horário (HH:mm) em um objeto Date no fuso local
+ */
+export function combineDateAndTime(dateStr: string, timeStr: string): Date {
+  if (!dateStr || !timeStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hour, min] = timeStr.split(':').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1, hour || 0, min || 0, 0);
+}
+
+/**
+ * Converte data e hora locais para string ISO compatível com PostgreSQL TIMESTAMPTZ
+ */
+export function toISOStringFromLocal(dateStr: string, timeStr: string): string {
+  const d = combineDateAndTime(dateStr, timeStr);
+  return d.toISOString();
+}
+
+/**
+ * Extrai a data local no formato YYYY-MM-DD
+ */
+export function getLocalDateString(isoOrDate: string | Date | undefined | null): string {
+  if (!isoOrDate) return format(new Date(), 'yyyy-MM-dd');
+  const d = typeof isoOrDate === 'string' ? parseISO(isoOrDate) : isoOrDate;
+  if (isNaN(d.getTime())) return format(new Date(), 'yyyy-MM-dd');
+  return format(d, 'yyyy-MM-dd');
+}
+
+/**
+ * Extrai o horário local no formato HH:mm
+ */
+export function getLocalTimeString(isoOrDate: string | Date | undefined | null): string {
+  if (!isoOrDate) return '09:00';
+  const d = typeof isoOrDate === 'string' ? parseISO(isoOrDate) : isoOrDate;
+  if (isNaN(d.getTime())) return '09:00';
+  return format(d, 'HH:mm');
+}
+
+/**
  * Validador de Conflito de Horário e Bloqueio de Intervalo:
  * Verifica se um novo intervalo [start, end + buffer] colide com agendamentos existentes do mesmo profissional.
  */
@@ -68,8 +106,8 @@ export function checkScheduleConflict({
   existingAppointments: Array<{
     id: string;
     professional_id: string;
-    start_time: string;
-    end_time: string;
+    start_time: string | Date;
+    end_time: string | Date;
     status: string;
     client?: { name: string };
     service?: { name: string };
@@ -78,11 +116,24 @@ export function checkScheduleConflict({
 }): { hasConflict: boolean; conflictingAppointment?: any; details?: string } {
   if (!startDateTime || !professionalId || !durationMinutes) return { hasConflict: false };
 
-  const start = typeof startDateTime === 'string' ? parseISO(startDateTime) : startDateTime;
+  let start: Date;
+  if (startDateTime instanceof Date) {
+    start = startDateTime;
+  } else if (typeof startDateTime === 'string') {
+    if (startDateTime.includes('T') && !startDateTime.endsWith('Z') && !startDateTime.includes('+') && !startDateTime.includes('-')) {
+      const [dPart, tPart] = startDateTime.split('T');
+      start = combineDateAndTime(dPart, tPart.substring(0, 5));
+    } else {
+      start = parseISO(startDateTime);
+    }
+  } else {
+    return { hasConflict: false };
+  }
+
   if (isNaN(start.getTime())) return { hasConflict: false };
 
   const totalMinutes = durationMinutes + (bufferMinutes || 0);
-  const end = addMinutes(start, totalMinutes);
+  const end = new Date(start.getTime() + totalMinutes * 60000);
 
   for (const app of existingAppointments) {
     // Ignorar o próprio agendamento em edição
@@ -92,12 +143,12 @@ export function checkScheduleConflict({
     // Checar apenas mesmo profissional
     if (app.professional_id !== professionalId) continue;
 
-    const appStart = parseISO(app.start_time);
-    const appEnd = parseISO(app.end_time);
+    const appStart = typeof app.start_time === 'string' ? parseISO(app.start_time) : app.start_time;
+    const appEnd = typeof app.end_time === 'string' ? parseISO(app.end_time) : app.end_time;
     if (isNaN(appStart.getTime()) || isNaN(appEnd.getTime())) continue;
 
-    // Checar sobreposição de intervalos: (StartA < EndB) and (EndA > StartB)
-    const isOverlapping = start < appEnd && end > appStart;
+    // Checar sobreposição estrita de intervalos: (StartA < EndB) and (EndA > StartB)
+    const isOverlapping = start.getTime() < appEnd.getTime() && end.getTime() > appStart.getTime();
 
     if (isOverlapping) {
       const clientName = app.client?.name || 'Cliente';
@@ -131,3 +182,4 @@ export function calculateEndTimeFormatted(startTimeStr: string, durationMinutes:
   const endM = totalMins % 60;
   return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 }
+
