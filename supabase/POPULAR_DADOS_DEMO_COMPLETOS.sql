@@ -1,10 +1,8 @@
 ﻿-- ==============================================================================
--- 🌸 IASIS AGENDA - POPULAR DADOS DEMONSTRATIVOS PARA TESTES (SEED COMPLETO)
--- Execute este script no SQL Editor do Supabase para ter todos os clientes,
--- agendamentos, financeiro, pacotes, produtos e CRM prontos para demonstração!
+-- 🌸 IASIS AGENDA - POPULAR DADOS DEMONSTRATIVOS (DDD 51 & UUIDs 100% VÁLIDOS)
 -- ==============================================================================
 
--- 1. CLIENTES DEMONSTRATIVOS
+-- 1. CLIENTES DEMONSTRATIVOS (DDD 51 - RS)
 INSERT INTO clients (
   id, name, nickname, cpf, birth_date, phone, whatsapp, email, address, city, state, zip_code,
   preferred_professional_id, how_did_you_find_us, allow_contact, tags, notes,
@@ -16,13 +14,13 @@ INSERT INTO clients (
     'Mari',
     '123.456.789-01',
     '1994-05-14',
-    '(11) 98877-6655',
-    '11988776655',
+    '(51) 99876-5432',
+    '51998765432',
     'mariana.alcantara@gmail.com',
-    'Rua Augusta, 500 - Consolação',
-    'São Paulo',
-    'SP',
-    '01305-000',
+    'Rua Padre Chagas, 320 - Moinhos de Vento',
+    'Porto Alegre',
+    'RS',
+    '90570-080',
     'd2000000-0000-0000-0000-000000000002',
     'Instagram',
     true,
@@ -40,13 +38,13 @@ INSERT INTO clients (
     'Nanda',
     '234.567.890-12',
     '1988-11-23',
-    '(11) 97766-5544',
-    '11977665544',
+    '(51) 98765-4321',
+    '51987654321',
     'nandacosta@hotmail.com',
-    'Alameda Santos, 1200 - Jardins',
-    'São Paulo',
-    'SP',
-    '01418-100',
+    'Av. Goethe, 540 - Bela Vista',
+    'Porto Alegre',
+    'RS',
+    '90430-100',
     'd1000000-0000-0000-0000-000000000001',
     'Indicação de amiga',
     true,
@@ -64,13 +62,13 @@ INSERT INTO clients (
     'Carol',
     '345.678.901-23',
     '2001-09-08',
-    '(11) 96655-4433',
-    '11966554433',
+    '(51) 99123-4567',
+    '51991234567',
     'carol.martins@outlook.com',
-    'Rua Vergueiro, 800 - Paraíso',
-    'São Paulo',
-    'SP',
-    '04101-000',
+    'Rua dos Andradas, 1200 - Centro Histórico',
+    'Porto Alegre',
+    'RS',
+    '90020-008',
     'd1000000-0000-0000-0000-000000000001',
     'Google',
     true,
@@ -88,13 +86,13 @@ INSERT INTO clients (
     'Paty',
     '456.789.012-34',
     '1982-03-30',
-    '(11) 95544-3322',
-    '11955443322',
+    '(51) 99234-5678',
+    '51992345678',
     'paty.guimaraes@yahoo.com.br',
-    'Rua Oscar Freire, 950 - Cerqueira César',
-    'São Paulo',
-    'SP',
-    '01426-001',
+    'Av. Carlos Gomes, 1500 - Três Figueiras',
+    'Porto Alegre',
+    'RS',
+    '90480-003',
     'd1000000-0000-0000-0000-000000000001',
     'Instagram',
     true,
@@ -112,13 +110,13 @@ INSERT INTO clients (
     'Ju',
     '567.890.123-45',
     '1990-12-19',
-    '(11) 94433-2211',
-    '11944332211',
+    '(51) 99345-6789',
+    '51993456789',
     'ju.neves@uol.com.br',
-    'Av. Brigadeiro Luís Antônio, 2300',
-    'São Paulo',
-    'SP',
-    '01402-000',
+    'Rua Silva Só, 780 - Santa Cecília',
+    'Porto Alegre',
+    'RS',
+    '90610-270',
     'd3000000-0000-0000-0000-000000000003',
     'Passou em frente',
     true,
@@ -136,13 +134,13 @@ INSERT INTO clients (
     'Rê',
     '678.901.234-56',
     '1986-07-22',
-    '(11) 93322-1100',
-    '11933221100',
+    '(51) 99456-7890',
+    '51994567890',
     'renata@empresa.com.br',
-    'Rua Pamplona, 450 - Jardim Paulista',
-    'São Paulo',
-    'SP',
-    '01405-000',
+    'Av. Nilo Peçanha, 2100 - Boa Vista',
+    'Porto Alegre',
+    'RS',
+    '91330-002',
     'd2000000-0000-0000-0000-000000000002',
     'Instagram',
     true,
@@ -156,7 +154,7 @@ INSERT INTO clients (
   )
 ON CONFLICT (id) DO NOTHING;
 
--- 2. AGENDAMENTOS DEMONSTRATIVOS (Hoje, Passado e Futuro)
+-- 2. AGENDAMENTOS DEMONSTRATIVOS
 INSERT INTO appointments (
   id, client_id, professional_id, service_id, start_time, end_time, duration_minutes, status,
   price, discount, deposit_requested, deposit_amount, deposit_paid, deposit_paid_at,
@@ -261,12 +259,12 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 3. CATEGORIAS FINANCEIRAS
 INSERT INTO financial_categories (id, name, type, color) VALUES
-  ('fc100000-0000-0000-0000-000000000001', 'Procedimentos & Atendimentos', 'income', '#10b981'),
-  ('fc200000-0000-0000-0000-000000000002', 'Venda de Produtos Home Care', 'income', '#06b6d4'),
-  ('fc300000-0000-0000-0000-000000000003', 'Sinais de Reserva (PIX)', 'income', '#8b5cf6'),
-  ('fc400000-0000-0000-0000-000000000004', 'Insumos e Cosméticos', 'expense', '#ef4444'),
-  ('fc500000-0000-0000-0000-000000000005', 'Aluguel e Infraestrutura', 'expense', '#f97316'),
-  ('fc600000-0000-0000-0000-000000000006', 'Comissões da Equipe', 'expense', '#ec4899')
+  ('fc010000-0000-0000-0000-000000000001', 'Procedimentos & Atendimentos', 'income', '#10b981'),
+  ('fc020000-0000-0000-0000-000000000002', 'Venda de Produtos Home Care', 'income', '#06b6d4'),
+  ('fc030000-0000-0000-0000-000000000003', 'Sinais de Reserva (PIX)', 'income', '#8b5cf6'),
+  ('fc040000-0000-0000-0000-000000000004', 'Insumos e Cosméticos', 'expense', '#ef4444'),
+  ('fc050000-0000-0000-0000-000000000005', 'Aluguel e Infraestrutura', 'expense', '#f97316'),
+  ('fc060000-0000-0000-0000-000000000006', 'Comissões da Equipe', 'expense', '#ec4899')
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. TRANSAÇÕES FINANCEIRAS
@@ -274,11 +272,11 @@ INSERT INTO financial_transactions (
   id, appointment_id, client_id, professional_id, category_id, type, description, amount, payment_method, paid_at, status
 ) VALUES
   (
-    'ft100000-0000-0000-0000-000000000001',
+    'fa100000-0000-0000-0000-000000000001',
     'aa400000-0000-0000-0000-000000000004',
     'b2000000-0000-0000-0000-000000000002',
     'd3000000-0000-0000-0000-000000000003',
-    'fc100000-0000-0000-0000-000000000001',
+    'fc010000-0000-0000-0000-000000000001',
     'income',
     'Atendimento - Limpeza de Pele Profunda (Fernanda Costa)',
     160.00,
@@ -287,11 +285,11 @@ INSERT INTO financial_transactions (
     'completed'
   ),
   (
-    'ft200000-0000-0000-0000-000000000002',
+    'fa200000-0000-0000-0000-000000000002',
     'aa100000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000001',
     'd2000000-0000-0000-0000-000000000002',
-    'fc300000-0000-0000-0000-000000000003',
+    'fc030000-0000-0000-0000-000000000003',
     'income',
     'Sinal de Reserva 30% PIX - Extensão Cílios (Mariana Alcantara)',
     54.00,
@@ -300,11 +298,11 @@ INSERT INTO financial_transactions (
     'completed'
   ),
   (
-    'ft300000-0000-0000-0000-000000000003',
+    'fa300000-0000-0000-0000-000000000003',
     'aa500000-0000-0000-0000-000000000005',
     'b4000000-0000-0000-0000-000000000004',
     'd1000000-0000-0000-0000-000000000001',
-    'fc300000-0000-0000-0000-000000000003',
+    'fc030000-0000-0000-0000-000000000003',
     'income',
     'Sinal de Reserva 30% PIX - Microblading (Patricia Guimarães)',
     117.00,
@@ -313,11 +311,11 @@ INSERT INTO financial_transactions (
     'completed'
   ),
   (
-    'ft400000-0000-0000-0000-000000000004',
+    'fa400000-0000-0000-0000-000000000004',
     NULL,
     NULL,
     NULL,
-    'fc400000-0000-0000-0000-000000000004',
+    'fc040000-0000-0000-0000-000000000004',
     'expense',
     'Compra de fios Nagaraku, pinças de precisão e adesivos',
     340.00,
@@ -326,11 +324,11 @@ INSERT INTO financial_transactions (
     'completed'
   ),
   (
-    'ft500000-0000-0000-0000-000000000005',
+    'fa500000-0000-0000-0000-000000000005',
     NULL,
     NULL,
     NULL,
-    'fc500000-0000-0000-0000-000000000005',
+    'fc050000-0000-0000-0000-000000000005',
     'expense',
     'Condomínio e Energia da Clínica',
     580.00,
@@ -344,28 +342,28 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO products (
   id, name, category, brand, cost_price, sale_price, stock_quantity, min_stock_alert, unit
 ) VALUES
-  ('p1000000-0000-0000-0000-000000000001', 'Espuma Higienizadora Lash Cleanse 150ml', 'Home Care', 'Lash Beauty', 22.00, 55.00, 14, 5, 'un'),
-  ('p2000000-0000-0000-0000-000000000002', 'Sérum Regenerador Labial com Ácido Hialurônico', 'Home Care', 'DermaSkin', 35.00, 89.00, 8, 4, 'un'),
-  ('p3000000-0000-0000-0000-000000000003', 'Kit Fios Nagaraku Volume Russo 0.07 Mix', 'Cabine', 'Nagaraku', 28.00, 0.00, 22, 6, 'un'),
-  ('p4000000-0000-0000-0000-000000000004', 'Pigmento RB Kollors Castanho Escuro 15ml', 'Cabine', 'RB Kollors', 140.00, 0.00, 3, 2, 'un')
+  ('ba100000-0000-0000-0000-000000000001', 'Espuma Higienizadora Lash Cleanse 150ml', 'Home Care', 'Lash Beauty', 22.00, 55.00, 14, 5, 'un'),
+  ('ba200000-0000-0000-0000-000000000002', 'Sérum Regenerador Labial com Ácido Hialurônico', 'Home Care', 'DermaSkin', 35.00, 89.00, 8, 4, 'un'),
+  ('ba300000-0000-0000-0000-000000000003', 'Kit Fios Nagaraku Volume Russo 0.07 Mix', 'Cabine', 'Nagaraku', 28.00, 0.00, 22, 6, 'un'),
+  ('ba400000-0000-0000-0000-000000000004', 'Pigmento RB Kollors Castanho Escuro 15ml', 'Cabine', 'RB Kollors', 140.00, 0.00, 3, 2, 'un')
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. PACOTES DE PROCEDIMENTOS
 INSERT INTO packages (
   id, name, description, total_sessions, price, validity_days
 ) VALUES
-  ('pk100000-0000-0000-0000-000000000001', 'Combo Retorno Cílios (4 Manutenções)', 'Pacote mensal de manutenção de cílios com desconto exclusivo.', 4, 380.00, 120),
-  ('pk200000-0000-0000-0000-000000000002', 'Tratamento Facial Completo (3 Sessões)', 'Limpeza profunda + Peeling de diamante + Hidratação intensiva.', 3, 420.00, 90)
+  ('ca100000-0000-0000-0000-000000000001', 'Combo Retorno Cílios (4 Manutenções)', 'Pacote mensal de manutenção de cílios com desconto exclusivo.', 4, 380.00, 120),
+  ('ca200000-0000-0000-0000-000000000002', 'Tratamento Facial Completo (3 Sessões)', 'Limpeza profunda + Peeling de diamante + Hidratação intensiva.', 3, 420.00, 90)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO client_packages (
   id, client_id, client_name, package_id, package_name, total_sessions, used_sessions, price_paid, expires_at, status
 ) VALUES
   (
-    'cp100000-0000-0000-0000-000000000001',
+    'cb100000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000001',
     'Mariana Alcantara',
-    'pk100000-0000-0000-0000-000000000001',
+    'ca100000-0000-0000-0000-000000000001',
     'Combo Retorno Cílios (4 Manutenções)',
     4,
     2,
@@ -379,9 +377,9 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO loyalty_accounts (
   id, client_id, points_balance, cashback_balance, tier, total_earned_points, total_cashback_earned
 ) VALUES
-  ('ly100000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001', 450, 45.00, 'Ouro', 600, 60.00),
-  ('ly200000-0000-0000-0000-000000000002', 'b2000000-0000-0000-0000-000000000002', 280, 28.00, 'Prata', 350, 35.00),
-  ('ly300000-0000-0000-0000-000000000003', 'b4000000-0000-0000-0000-000000000004', 620, 62.00, 'Ouro', 850, 85.00)
+  ('cc100000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001', 450, 45.00, 'Ouro', 600, 60.00),
+  ('cc200000-0000-0000-0000-000000000002', 'b2000000-0000-0000-0000-000000000002', 280, 28.00, 'Prata', 350, 35.00),
+  ('cc300000-0000-0000-0000-000000000003', 'b4000000-0000-0000-0000-000000000004', 620, 62.00, 'Ouro', 850, 85.00)
 ON CONFLICT (client_id) DO NOTHING;
 
 -- 8. FOLLOW-UPS & CRM RETENÇÃO
@@ -389,10 +387,10 @@ INSERT INTO client_follow_ups (
   id, client_id, client_name, client_phone, type, reason, recommended_date, assigned_to_name, status, recommended_message
 ) VALUES
   (
-    'fu100000-0000-0000-0000-000000000001',
+    'cd100000-0000-0000-0000-000000000001',
     'b2000000-0000-0000-0000-000000000002',
     'Fernanda Souza Costa',
-    '(11) 97766-5544',
+    '(51) 98765-4321',
     'pos_atendimento',
     'Acompanhamento de 24h pós Limpeza de Pele Profunda',
     CURRENT_DATE,
@@ -401,10 +399,10 @@ INSERT INTO client_follow_ups (
     'Olá Fernanda! Como está se sentindo após a limpeza de ontem? Sua pele ficou calma? Lembre-se de beber bastante água e usar protetor solar! ✨'
   ),
   (
-    'fu200000-0000-0000-0000-000000000002',
+    'cd200000-0000-0000-0000-000000000002',
     'b6000000-0000-0000-0000-000000000006',
     'Renata Albuquerque',
-    '(11) 93322-1100',
+    '(51) 99456-7890',
     'risco_abandono',
     'Cliente em risco de abandono (48 dias sem retorno para manutenção de cílios)',
     CURRENT_DATE,
@@ -413,10 +411,10 @@ INSERT INTO client_follow_ups (
     'Oi Rê! Sentimos sua falta aqui no estúdio! Seus cílios já devem estar precisando de um retoque. Vamos garantir um horário para você nesta semana?'
   ),
   (
-    'fu300000-0000-0000-0000-000000000005',
+    'cd300000-0000-0000-0000-000000000003',
     'b5000000-0000-0000-0000-000000000005',
     'Juliana Moreira Neves',
-    '(11) 94433-2211',
+    '(51) 99345-6789',
     'resgate_inativa',
     'Cliente inativa há 75 dias - Oferecer cupom de boas-vindas de retorno',
     CURRENT_DATE,
@@ -431,7 +429,7 @@ INSERT INTO commission_records (
   id, professional_id, professional_name, client_name, service_name, appointment_date, gross_amount, commission_rate, commission_amount, status
 ) VALUES
   (
-    'cm100000-0000-0000-0000-000000000001',
+    'ce100000-0000-0000-0000-000000000001',
     'd3000000-0000-0000-0000-000000000003',
     'Beatriz Lima',
     'Fernanda Souza Costa',
