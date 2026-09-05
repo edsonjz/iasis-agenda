@@ -6,7 +6,7 @@ import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { AppointmentModal } from '@/components/agenda/AppointmentModal';
 import { ScheduleConfigModal } from '@/components/agenda/ScheduleConfigModal';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getAppointmentServicesNames } from '@/lib/utils';
 import { formatDateBR, formatTimeBR, getDayOfWeekName, getMonthYearName } from '@/lib/dateUtils';
 import { APPOINTMENT_STATUS_MAP } from '@/lib/constants';
 import { Appointment, AppointmentStatus } from '@/types';
@@ -44,7 +44,7 @@ import { ptBR } from 'date-fns/locale';
 type ViewMode = 'day' | 'week' | 'month';
 
 export const Agenda: React.FC = () => {
-  const { appointments, professionals, settings } = useBusiness();
+  const { appointments, professionals, services, settings } = useBusiness();
   const { error: toastError } = useToast();
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('day');
@@ -353,7 +353,7 @@ export const Agenda: React.FC = () => {
                               </Badge>
                             </div>
                             <div className="text-[11px] text-slate-600 dark:text-slate-400">
-                              {app.service?.name} • {app.duration_minutes} min • {app.professional?.nickname || app.professional?.name}
+                              {getAppointmentServicesNames(app, services)} • {app.duration_minutes} min • {app.professional?.nickname || app.professional?.name}
                             </div>
                           </div>
                           <div className="text-right">
@@ -384,7 +384,7 @@ export const Agenda: React.FC = () => {
                       >
                         <Lock className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
                         <span className="truncate">
-                          🔒 <strong>Horário Bloqueado:</strong> {app.professional?.nickname || app.professional?.name} em atendimento ({app.client?.name} — {app.service?.name}) até às <strong>{formatTimeBR(app.end_time)}</strong>
+                          🔒 <strong>Horário Bloqueado:</strong> {app.professional?.nickname || app.professional?.name} em atendimento ({app.client?.name} — {getAppointmentServicesNames(app, services)}) até às <strong>{formatTimeBR(app.end_time)}</strong>
                         </span>
                       </div>
                     ))}
@@ -482,12 +482,12 @@ export const Agenda: React.FC = () => {
                                 borderLeftWidth: '3px',
                                 borderLeftColor: app.professional?.color || '#bf3f57',
                               }}
-                              title={`${app.client?.name} - ${app.service?.name} (${formatTimeBR(app.start_time)} às ${formatTimeBR(app.end_time)})`}
+                              title={`${app.client?.name} - ${getAppointmentServicesNames(app, services)} (${formatTimeBR(app.start_time)} às ${formatTimeBR(app.end_time)})`}
                             >
                               <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
                                 {app.client?.name}
                               </div>
-                              <div className="text-slate-500 truncate">{app.service?.name}</div>
+                              <div className="text-slate-500 truncate">{getAppointmentServicesNames(app, services)}</div>
                             </div>
                           ))}
 

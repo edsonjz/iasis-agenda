@@ -5,7 +5,7 @@ import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { AppointmentModal } from '@/components/agenda/AppointmentModal';
-import { formatCurrency, formatPhone, getWhatsAppUrl } from '@/lib/utils';
+import { formatCurrency, formatPhone, getWhatsAppUrl, getAppointmentServicesNames } from '@/lib/utils';
 import { formatDateBR, formatTimeBR } from '@/lib/dateUtils';
 import { APPOINTMENT_STATUS_MAP } from '@/lib/constants';
 import { Appointment } from '@/types';
@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { metrics, appointments, clients, professionals, saveAppointment } = useBusiness();
+  const { metrics, appointments, clients, professionals, services, saveAppointment } = useBusiness();
   const { profile } = useAuth();
   const navigate = useNavigate();
 
@@ -244,7 +244,7 @@ export const Dashboard: React.FC = () => {
                           </Badge>
                         </div>
                         <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                          {app.service?.name} • Profissional: <span className="font-semibold text-slate-700 dark:text-slate-300">{app.professional?.nickname || app.professional?.name}</span>
+                          {getAppointmentServicesNames(app, services)} • Profissional: <span className="font-semibold text-slate-700 dark:text-slate-300">{app.professional?.nickname || app.professional?.name}</span>
                         </div>
                         {app.notes && (
                           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 italic line-clamp-1">

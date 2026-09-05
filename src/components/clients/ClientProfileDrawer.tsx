@@ -4,7 +4,7 @@ import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Client, Appointment, AnamnesisRecord, ClientFollowUp } from '@/types';
 import { useBusiness } from '@/contexts/BusinessContext';
-import { formatCurrency, formatPhone, getWhatsAppUrl } from '@/lib/utils';
+import { formatCurrency, formatPhone, getWhatsAppUrl, getAppointmentServicesNames } from '@/lib/utils';
 import { formatDateBR, formatTimeBR, formatDateTimeBR } from '@/lib/dateUtils';
 import { APPOINTMENT_STATUS_MAP } from '@/lib/constants';
 import { calculateClientMetrics, buildClientTimelineEvents } from '@/lib/crmEngine';
@@ -73,6 +73,7 @@ export const ClientProfileDrawer: React.FC<ClientProfileDrawerProps> = ({
   const {
     appointments,
     professionals,
+    services,
     anamnesisRecords,
     evolutions,
     photos,
@@ -496,9 +497,16 @@ export const ClientProfileDrawer: React.FC<ClientProfileDrawerProps> = ({
                         className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between text-xs"
                       >
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-slate-100">{app.service?.name}</div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
+                            {getAppointmentServicesNames(app, services)}
+                            {app.services && app.services.length > 1 && (
+                              <span className="text-[9px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-1.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900">
+                                {app.services.length} procedimentos
+                              </span>
+                            )}
+                          </div>
                           <div className="text-[11px] text-slate-500">
-                            {formatDateBR(app.start_time)} às {formatTimeBR(app.start_time)} • {app.professional?.nickname || app.professional?.name}
+                            {formatDateBR(app.start_time)} às {formatTimeBR(app.start_time)} ({app.duration_minutes} min) • {app.professional?.nickname || app.professional?.name}
                           </div>
                         </div>
                         <div className="text-right">
@@ -536,7 +544,14 @@ export const ClientProfileDrawer: React.FC<ClientProfileDrawerProps> = ({
                       className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between text-xs"
                     >
                       <div>
-                        <h4 className="font-bold text-slate-900 dark:text-slate-100">{app.service?.name}</h4>
+                        <h4 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
+                          {getAppointmentServicesNames(app, services)}
+                          {app.services && app.services.length > 1 && (
+                            <span className="text-[9px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-1.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900">
+                              {app.services.length} procedimentos
+                            </span>
+                          )}
+                        </h4>
                         <div className="text-[11px] text-slate-500">
                           {formatDateBR(app.start_time)} • Profissional: {app.professional?.name}
                         </div>
@@ -731,7 +746,7 @@ export const ClientProfileDrawer: React.FC<ClientProfileDrawerProps> = ({
                     className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between"
                   >
                     <div>
-                      <div className="font-bold text-slate-900 dark:text-slate-100">{app.service?.name}</div>
+                      <div className="font-bold text-slate-900 dark:text-slate-100">{getAppointmentServicesNames(app, services)}</div>
                       <div className="text-[11px] text-slate-500">
                         {formatDateBR(app.start_time)} • Forma: <span className="uppercase font-semibold">{app.payment_method || 'PIX'}</span>
                       </div>

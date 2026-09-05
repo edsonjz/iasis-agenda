@@ -167,6 +167,8 @@ export interface Appointment {
   professional?: Professional;
   service_id: string;
   service?: Service;
+  service_ids?: string[];
+  services?: Service[];
   start_time: string; // ISO 8601 string
   end_time: string;   // ISO 8601 string
   duration_minutes: number;

@@ -111,8 +111,17 @@ export function calculateClientMetrics(
   const profCounts: Record<string, number> = {};
 
   completedApps.forEach(a => {
-    const sName = a.service?.name || 'Procedimento';
-    serviceCounts[sName] = (serviceCounts[sName] || 0) + 1;
+    const sList = (a.services && a.services.length > 0)
+      ? a.services
+      : (a.service ? [a.service] : []);
+    if (sList.length > 0) {
+      sList.forEach(s => {
+        serviceCounts[s.name] = (serviceCounts[s.name] || 0) + 1;
+      });
+    } else {
+      const sName = a.service?.name || 'Procedimento';
+      serviceCounts[sName] = (serviceCounts[sName] || 0) + 1;
+    }
 
     const pName = a.professional?.nickname || a.professional?.name || 'Profissional';
     profCounts[pName] = (profCounts[pName] || 0) + 1;
@@ -255,21 +264,24 @@ export function buildClientTimelineEvents(
   appointments
     .filter(a => a.client_id === client.id)
     .forEach(a => {
+      const sName = (a.services && a.services.length > 0)
+        ? a.services.map(s => s.name).join(' + ')
+        : (a.service?.name || 'Procedimento');
       let eventType: ClientTimelineEvent['type'] = 'appointment_completed';
-      let title = `Atendimento: ${a.service?.name || 'Procedimento'}`;
+      let title = `Atendimento: ${sName}`;
       let icon = 'calendar';
 
       if (a.status === 'cancelled') {
         eventType = 'appointment_cancelled';
-        title = `Agendamento Cancelado: ${a.service?.name || 'Procedimento'}`;
+        title = `Agendamento Cancelado: ${sName}`;
         icon = 'x-circle';
       } else if (a.status === 'no_show') {
         eventType = 'appointment_no_show';
-        title = `Falta / No-Show: ${a.service?.name || 'Procedimento'}`;
+        title = `Falta / No-Show: ${sName}`;
         icon = 'alert-triangle';
       } else if (isFuture(parseISO(a.start_time))) {
         eventType = 'appointment_scheduled';
-        title = `Agendado: ${a.service?.name || 'Procedimento'}`;
+        title = `Agendado: ${sName}`;
         icon = 'clock';
       }
 

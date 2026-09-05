@@ -624,8 +624,40 @@ export const DataService = {
       !DEMO_IDS.CLIENTS.includes(a.client_id) &&
       !DEMO_IDS.PROFESSIONALS.includes(a.professional_id)
     );
-    setLocal(STORAGE_KEYS.APPOINTMENTS, clean);
-    return clean;
+
+    // Enrich appointments with multiple services
+    const servicesList = getLocal<Service[]>(STORAGE_KEYS.SERVICES, []);
+    const enriched = clean.map(a => {
+      let sIds: string[] = [];
+      if ((a as any).service_ids && Array.isArray((a as any).service_ids) && (a as any).service_ids.length > 0) {
+        sIds = (a as any).service_ids;
+      } else if (a.internal_notes && a.internal_notes.includes('<!--SERVICES:')) {
+        const match = a.internal_notes.match(/<!--SERVICES:(.*?)-->/);
+        if (match && match[1]) {
+          try {
+            sIds = JSON.parse(match[1]);
+          } catch {
+            sIds = [];
+          }
+        }
+      }
+      if (sIds.length === 0 && a.service_id) {
+        sIds = [a.service_id];
+      }
+
+      const matchedServices = sIds
+        .map(sid => servicesList.find(s => s.id === sid))
+        .filter((s): s is Service => !!s);
+
+      return {
+        ...a,
+        service_ids: sIds,
+        services: matchedServices.length > 0 ? matchedServices : (a.service ? [a.service] : []),
+      };
+    });
+
+    setLocal(STORAGE_KEYS.APPOINTMENTS, enriched);
+    return enriched;
   },
 
   async saveAppointment(app: Appointment): Promise<Appointment> {
@@ -633,10 +665,24 @@ export const DataService = {
     const validId = ensureUUID(app.id);
     const calculatedFinalPrice = Math.max(0, (app.price || 0) - (app.discount || 0));
     
+    // Ensure primary service_id and service_ids array are aligned
+    const serviceIds = app.service_ids && app.service_ids.length > 0 
+      ? app.service_ids 
+      : (app.service_id ? [app.service_id] : []);
+    const primaryServiceId = serviceIds[0] || app.service_id;
+
+    // Encode services safely into internal_notes to guarantee cross-session persistence
+    const baseInternalNotes = (app.internal_notes || '').replace(/<!--SERVICES:.*?-->/g, '').trim();
+    const servicesTag = serviceIds.length > 0 ? `<!--SERVICES:${JSON.stringify(serviceIds)}-->` : '';
+    const finalInternalNotes = [baseInternalNotes, servicesTag].filter(Boolean).join('\n');
+
     const validApp: Appointment = {
       ...app,
       id: validId,
+      service_id: primaryServiceId,
+      service_ids: serviceIds,
       final_price: calculatedFinalPrice,
+      internal_notes: finalInternalNotes || undefined,
     };
 
     if (isSupabaseConfigured && supabase) {
@@ -678,6 +724,8 @@ export const DataService = {
         const savedApp: Appointment = {
           ...validApp,
           ...data,
+          service_ids: serviceIds,
+          services: validApp.services && validApp.services.length > 0 ? validApp.services : (validApp.service ? [validApp.service] : []),
           final_price: calculatedFinalPrice,
           client: app.client,
           professional: app.professional,

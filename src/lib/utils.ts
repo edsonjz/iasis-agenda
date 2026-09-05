@@ -130,6 +130,37 @@ export function generateUUID(): string {
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+}import type { Appointment, Service } from '@/types';
+
+/**
+ * Retorna com segurança a lista de serviços do agendamento (suporta múltiplos ou serviço único legado)
+ */
+export function getAppointmentServices(appointment?: Partial<Appointment> | null, allServices: Service[] = []): Service[] {
+  if (!appointment) return [];
+  if (appointment.services && appointment.services.length > 0) {
+    return appointment.services;
+  }
+  if (appointment.service_ids && appointment.service_ids.length > 0) {
+    const found = appointment.service_ids
+      .map(id => allServices.find(s => s.id === id))
+      .filter((s): s is Service => !!s);
+    if (found.length > 0) return found;
+  }
+  if (appointment.service) return [appointment.service];
+  if (appointment.service_id) {
+    const found = allServices.find(s => s.id === appointment.service_id);
+    if (found) return [found];
+  }
+  return [];
 }
 
-
+/**
+ * Retorna o nome formatado de todos os serviços incluídos no agendamento (ex: "Cílios + Manicure")
+ */
+export function getAppointmentServicesNames(appointment?: Partial<Appointment> | null, allServices: Service[] = []): string {
+  const svcs = getAppointmentServices(appointment, allServices);
+  if (svcs.length > 0) {
+    return svcs.map(s => s.name).join(' + ');
+  }
+  return appointment?.service?.name || 'Procedimento';
+}

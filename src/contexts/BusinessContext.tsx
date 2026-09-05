@@ -351,11 +351,25 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Appointments
   const handleSaveAppointment = async (app: Appointment) => {
     const originalId = app.id;
+    const selectedServiceIds = app.service_ids && app.service_ids.length > 0
+      ? app.service_ids
+      : (app.service_id ? [app.service_id] : []);
+    const matchedServices = selectedServiceIds
+      .map(sid => services.find(s => s.id === sid))
+      .filter((s): s is Service => !!s);
+    const primaryService = matchedServices[0] || services.find(s => s.id === app.service_id) || app.service;
+    const servicesCombinedName = matchedServices.length > 0
+      ? matchedServices.map(s => s.name).join(' + ')
+      : (primaryService?.name || 'Procedimento');
+
     const enriched: Appointment = {
       ...app,
       client: clients.find(c => c.id === app.client_id) || app.client,
       professional: professionals.find(p => p.id === app.professional_id) || app.professional,
-      service: services.find(s => s.id === app.service_id) || app.service,
+      service_id: primaryService?.id || app.service_id,
+      service: primaryService,
+      service_ids: selectedServiceIds,
+      services: matchedServices.length > 0 ? matchedServices : (primaryService ? [primaryService] : []),
     };
 
     const res = await DataService.saveAppointment(enriched);
@@ -381,7 +395,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         professional_name: prof?.name || 'Profissional',
         appointment_id: app.id,
         client_name: enriched.client?.name || 'Cliente',
-        service_name: enriched.service?.name || 'Procedimento',
+        service_name: servicesCombinedName,
         appointment_date: app.start_time.split('T')[0],
         gross_amount: app.final_price,
         commission_rate: rate,
@@ -401,7 +415,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             recovered_at: new Date().toISOString(),
             inactive_days_count: daysGap,
             previous_status: daysGap >= crmConfig.abandoned_days ? 'abandonou' : 'inativa',
-            procedure_name: enriched.service?.name || 'Procedimento',
+            procedure_name: servicesCombinedName,
             amount: app.final_price,
             professional_name: prof?.name || 'Profissional',
             created_at: new Date().toISOString(),

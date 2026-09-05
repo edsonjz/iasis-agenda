@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { Search, User, Calendar, Sparkles, UserCheck, ArrowRight } from 'lucide-react';
-import { formatCurrency, formatPhone } from '@/lib/utils';
+import { formatCurrency, formatPhone, getAppointmentServicesNames } from '@/lib/utils';
 import { formatDateBR, formatTimeBR } from '@/lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 
@@ -52,7 +52,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
     ? appointments.filter(
         a =>
           a.client?.name.toLowerCase().includes(cleanQuery) ||
-          a.service?.name.toLowerCase().includes(cleanQuery) ||
+          (a.services && a.services.length > 0
+            ? a.services.some(s => s.name.toLowerCase().includes(cleanQuery))
+            : a.service?.name.toLowerCase().includes(cleanQuery)) ||
           a.professional?.name.toLowerCase().includes(cleanQuery)
       ).slice(0, 4)
     : [];
@@ -131,7 +133,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
                   >
                     <div>
                       <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {app.client?.name} — {app.service?.name}
+                        {app.client?.name} — {getAppointmentServicesNames(app, services)}
                       </div>
                       <div className="text-xs text-slate-500">
                         {formatDateBR(app.start_time)} às {formatTimeBR(app.start_time)} ({app.professional?.nickname || app.professional?.name})

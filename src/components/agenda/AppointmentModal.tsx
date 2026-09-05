@@ -6,7 +6,7 @@ import { Select } from '../common/Select';
 import { ClientSearchCombobox } from '../common/ClientSearchCombobox';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useToast } from '@/contexts/ToastContext';
-import { Appointment, AppointmentStatus, PaymentMethod } from '@/types';
+import { Appointment, AppointmentStatus, PaymentMethod, Service } from '@/types';
 import {
   checkScheduleConflict,
   formatTimeBR,
@@ -19,7 +19,7 @@ import {
 } from '@/lib/dateUtils';
 import { formatCurrency, getWhatsAppUrl, generateUUID } from '@/lib/utils';
 import { APPOINTMENT_STATUS_MAP, PAYMENT_METHODS_MAP } from '@/lib/constants';
-import { AlertCircle, Plus, Copy, Clock, MessageCircle, ExternalLink } from 'lucide-react';
+import { AlertCircle, Plus, Copy, Clock, MessageCircle, ExternalLink, Trash2, Sparkles } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 interface AppointmentModalProps {
@@ -42,7 +42,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
   const [clientId, setClientId] = useState('');
   const [professionalId, setProfessionalId] = useState('');
-  const [serviceId, setServiceId] = useState('');
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [serviceToAdd, setServiceToAdd] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('09:00');
   const [durationMinutes, setDurationMinutes] = useState(60);
@@ -66,7 +67,10 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     if (appointment) {
       setClientId(appointment.client_id);
       setProfessionalId(appointment.professional_id);
-      setServiceId(appointment.service_id);
+      const appServiceIds = appointment.service_ids && appointment.service_ids.length > 0
+        ? appointment.service_ids
+        : (appointment.service_id ? [appointment.service_id] : []);
+      setSelectedServiceIds(appServiceIds);
       setDate(getLocalDateString(appointment.start_time));
       setTime(getLocalTimeString(appointment.start_time));
       setDurationMinutes(appointment.duration_minutes || 60);
@@ -89,9 +93,13 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setProfessionalId(initialProfessionalId || professionals[0]?.id || '');
       const firstService = services[0];
       if (firstService) {
-        setServiceId(firstService.id);
+        setSelectedServiceIds([firstService.id]);
         setDurationMinutes(firstService.duration_minutes || 60);
         setPrice(firstService.promotional_price || firstService.price || 0);
+      } else {
+        setSelectedServiceIds([]);
+        setDurationMinutes(60);
+        setPrice(0);
       }
       setStatus('scheduled');
       setDiscount(0);
@@ -111,26 +119,75 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     }
   }, [appointment, isOpen, initialDate, initialProfessionalId, clients, professionals, services, settings]);
 
-  // Handle service change to auto-fill price and duration
-  const handleServiceChange = (id: string) => {
-    setServiceId(id);
-    const selected = services.find(s => s.id === id);
-    if (selected) {
-      setDurationMinutes(selected.duration_minutes);
-      const basePrice = selected.promotional_price || selected.price;
-      setPrice(basePrice);
-      if (depositRequested && settings?.default_deposit_percentage) {
-        setDepositAmount((basePrice * settings.default_deposit_percentage) / 100);
-      }
+  // Selected services objects
+  const selectedServices = useMemo(() => {
+    return selectedServiceIds
+      .map(id => services.find(s => s.id === id))
+      .filter((s): s is Service => !!s);
+  }, [services, selectedServiceIds]);
+
+  const totalCalculatedDuration = useMemo(() => {
+    return selectedServices.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+  }, [selectedServices]);
+
+  const totalCalculatedPrice = useMemo(() => {
+    return selectedServices.reduce((acc, s) => acc + (s.promotional_price || s.price || 0), 0);
+  }, [selectedServices]);
+
+  const bufferMinutes = useMemo(() => {
+    if (selectedServices.length === 0) return 0;
+    return Math.max(...selectedServices.map(s => s.buffer_minutes || 0), 0);
+  }, [selectedServices]);
+
+  const endTimeFormatted = calculateEndTimeFormatted(time, durationMinutes);
+
+  // Add a service to the appointment and auto-recalculate
+  const handleAddService = (id: string) => {
+    if (!id) return;
+    if (selectedServiceIds.includes(id)) {
+      toastError('Este serviço já foi adicionado a este agendamento.');
+      return;
+    }
+    const newIds = [...selectedServiceIds, id];
+    setSelectedServiceIds(newIds);
+    setServiceToAdd('');
+
+    const newServices = newIds
+      .map(sId => services.find(s => s.id === sId))
+      .filter((s): s is Service => !!s);
+    const newDur = newServices.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+    const newPrice = newServices.reduce((acc, s) => acc + (s.promotional_price || s.price || 0), 0);
+
+    setDurationMinutes(newDur || 30);
+    setPrice(newPrice);
+
+    if (depositRequested && settings?.default_deposit_percentage) {
+      setDepositAmount((newPrice * settings.default_deposit_percentage) / 100);
     }
   };
 
-  const selectedService = useMemo(() => {
-    return services.find(s => s.id === serviceId) || null;
-  }, [services, serviceId]);
+  // Remove a service from the appointment and auto-recalculate
+  const handleRemoveService = (id: string) => {
+    if (selectedServiceIds.length <= 1) {
+      toastError('O agendamento precisa de pelo menos um serviço.');
+      return;
+    }
+    const newIds = selectedServiceIds.filter(sId => sId !== id);
+    setSelectedServiceIds(newIds);
 
-  const bufferMinutes = selectedService?.buffer_minutes || 0;
-  const endTimeFormatted = calculateEndTimeFormatted(time, durationMinutes);
+    const newServices = newIds
+      .map(sId => services.find(s => s.id === sId))
+      .filter((s): s is Service => !!s);
+    const newDur = newServices.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+    const newPrice = newServices.reduce((acc, s) => acc + (s.promotional_price || s.price || 0), 0);
+
+    setDurationMinutes(newDur || 30);
+    setPrice(newPrice);
+
+    if (depositRequested && settings?.default_deposit_percentage) {
+      setDepositAmount((newPrice * settings.default_deposit_percentage) / 100);
+    }
+  };
 
   // Conflict Detection with Buffer & Enriched Details
   const conflictInfo = useMemo(() => {
@@ -184,8 +241,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       toastError('Por favor, selecione uma profissional');
       return;
     }
-    if (!serviceId) {
-      toastError('Por favor, selecione um serviço');
+    if (selectedServiceIds.length === 0) {
+      toastError('Por favor, selecione pelo menos um serviço');
       return;
     }
     if (conflictInfo.hasConflict) {
@@ -204,7 +261,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
         id: appointment?.id || generateUUID(),
         client_id: clientId,
         professional_id: professionalId,
-        service_id: serviceId,
+        service_id: selectedServiceIds[0],
+        service_ids: selectedServiceIds,
+        services: selectedServices,
         start_time: startIso,
         end_time: endIso,
         duration_minutes: durationMinutes,
@@ -236,13 +295,16 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   // Build WhatsApp Confirmation Message with Deposit and Pix Info
   const buildWhatsAppMessage = (): string => {
     const targetClient = clients.find(c => c.id === clientId);
-    const targetService = services.find(s => s.id === serviceId);
     const targetProf = professionals.find(p => p.id === professionalId);
     const businessName = settings?.trade_name || settings?.name || 'IASIS Estética Avançada';
     const pixKey = settings?.pix_key || 'studiojaquesouza@gmail.com';
     const pixType = settings?.pix_type ? ` (${settings.pix_type})` : '';
 
-    let msg = `Olá, *${targetClient?.name || 'Cliente'}*! Tudo bem? 😊\n\nConfirmando seu agendamento no *${businessName}*:\n📅 *Data:* ${formatDateBR(date)}\n⏰ *Horário:* ${time}\n💅 *Procedimento:* ${targetService?.name || 'Procedimento'}\n👩‍⚕️ *Profissional:* ${targetProf?.nickname || targetProf?.name || 'Profissional'}\n💰 *Valor Total:* ${formatCurrency(finalPrice)}`;
+    const servicesListText = selectedServices.length > 0
+      ? selectedServices.map(s => `  • *${s.name}* (${s.duration_minutes} min — ${formatCurrency(s.promotional_price || s.price)})`).join('\n')
+      : '  • Procedimento';
+
+    let msg = `Olá, *${targetClient?.name || 'Cliente'}*! Tudo bem? 😊\n\nConfirmando seu agendamento no *${businessName}*:\n📅 *Data:* ${formatDateBR(date)}\n⏰ *Horário:* ${time} às ${endTimeFormatted} (${durationMinutes} min)\n👩‍⚕️ *Profissional:* ${targetProf?.nickname || targetProf?.name || 'Profissional'}\n\n💅 *Procedimento(s) Agendado(s):*\n${servicesListText}\n\n💰 *Valor Total:* ${formatCurrency(finalPrice)}`;
 
     if (depositRequested && depositAmount > 0) {
       msg += `\n\n📌 *SINAL DE RESERVA OBRIGATÓRIO*:\nPara confirmar e garantir seu horário na agenda, solicitamos o pagamento do sinal de reserva:\n💵 *Valor do Sinal:* ${formatCurrency(depositAmount)}\n🔑 *Chave PIX:* ${pixKey}${pixType}\n🏦 *Favorecido:* ${businessName}\n\n⚠️ _Por favor, nos envie o comprovante do PIX por aqui para finalizarmos a reserva do seu horário! O valor pago será abatido no total do seu procedimento._ 💕`;
@@ -252,6 +314,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
     return msg;
   };
+
+
 
   const handleCopyConfirmation = () => {
     const msg = buildWhatsAppMessage();
@@ -352,22 +416,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
           )}
         </div>
 
-        {/* Service & Professional Selection */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            label="Serviço / Procedimento"
-            value={serviceId}
-            onChange={e => handleServiceChange(e.target.value)}
-            required
-          >
-            <option value="">Selecione um serviço...</option>
-            {services.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.duration_minutes} min — {formatCurrency(s.promotional_price || s.price)})
-              </option>
-            ))}
-          </Select>
-
+        {/* Professional Selection */}
+        <div>
           <Select
             label="Profissional Responsável"
             value={professionalId}
@@ -381,6 +431,109 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               </option>
             ))}
           </Select>
+        </div>
+
+        {/* Multi-Service Selection Section */}
+        <div className="space-y-3 p-4 rounded-2xl border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-rose-500" />
+              Procedimentos do Atendimento ({selectedServices.length}) <span className="text-rose-500">*</span>
+            </label>
+            {selectedServices.length > 1 && (
+              <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+                ✨ Múltiplos Serviços Somados
+              </span>
+            )}
+          </div>
+
+          {/* Add Service Selector */}
+          <div>
+            <Select
+              value={serviceToAdd}
+              onChange={e => {
+                if (e.target.value) {
+                  handleAddService(e.target.value);
+                }
+              }}
+            >
+              <option value="">+ Clique aqui para adicionar outro procedimento a este agendamento...</option>
+              {services
+                .filter(s => !selectedServiceIds.includes(s.id))
+                .map(s => (
+                  <option key={s.id} value={s.id}>
+                    + {s.name} ({s.duration_minutes} min — {formatCurrency(s.promotional_price || s.price)})
+                  </option>
+                ))}
+            </Select>
+          </div>
+
+          {/* Selected Services List */}
+          <div className="space-y-2">
+            {selectedServices.map((s, index) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-rose-300 dark:hover:border-rose-800 transition-colors"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-5 h-5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block truncate">
+                      {s.name}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {s.category?.name || 'Procedimento'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-slate-500" />
+                    {s.duration_minutes} min
+                  </span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                    {formatCurrency(s.promotional_price || s.price)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveService(s.id)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                    title="Remover este procedimento do agendamento"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {selectedServices.length === 0 && (
+              <div className="p-3 text-center text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200 dark:border-rose-900">
+                ⚠️ Nenhum serviço selecionado. Por favor, adicione pelo menos um serviço acima.
+              </div>
+            )}
+          </div>
+
+          {/* Real-time Services Total Banner */}
+          {selectedServices.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 text-xs">
+              <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                <Clock className="w-4 h-4 text-rose-500" />
+                <span>
+                  Tempo Total Somado: <strong className="text-slate-900 dark:text-slate-100">{totalCalculatedDuration} min</strong>
+                  {bufferMinutes > 0 && (
+                    <span className="text-[10px] text-slate-500"> (+{bufferMinutes}min intervalo)</span>
+                  )}
+                </span>
+              </div>
+              <div className="text-slate-700 dark:text-slate-300">
+                <span>Valor Total Somado: </span>
+                <strong className="text-rose-600 dark:text-rose-400 text-sm font-extrabold">{formatCurrency(totalCalculatedPrice)}</strong>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Date, Time & Duration */}
@@ -401,7 +554,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               required
             />
             <Input
-              label="Duração do Procedimento (minutos)"
+              label="Duração Total Bloqueada (minutos)"
               type="number"
               min={15}
               step={5}
@@ -440,7 +593,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
         {/* Price, Discount & Final Price Calculation */}
         <div className="space-y-2 p-3.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200/80 dark:border-slate-800">
-          {selectedService && (selectedService.price === 0 || !selectedService.price) && (
+          {selectedServices.some(s => !s.price || s.price === 0) && (
             <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
               <span>💡</span>
               <span><strong>Procedimento com valor a definir:</strong> Você pode deixar R$ 0,00 por enquanto e preencher o valor final durante ou após a realização do procedimento.</span>
