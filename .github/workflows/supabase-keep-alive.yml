@@ -2,8 +2,8 @@ name: Supabase Keep-Alive
 
 on:
   schedule:
-    # Executa a cada 3 dias às 06:00 UTC (03:00 Horário de Brasília)
-    - cron: '0 6 */3 * *'
+    # Executa a cada 2 dias às 06:00 UTC (03:00 Horário de Brasília)
+    - cron: '0 6 */2 * *'
   workflow_dispatch: # Permite execução manual a qualquer momento pelo painel do GitHub
 
 jobs:
@@ -11,24 +11,29 @@ jobs:
     name: Manter Supabase Ativo
     runs-on: ubuntu-latest
     steps:
-      - name: Enviar requisição HTTP leve para evitar pausa por inatividade
+      - name: Enviar requisição de atividade para o Supabase
         run: |
           ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
           if [ -z "$ANON_KEY" ]; then
             ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1YnJmcW90ZG1laGtsYm1ldXRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NzE4NjEsImV4cCI6MjEwNDA0Nzg2MX0.bbwZUIxUa3m5g1Q2SeoxItfjXXSRSkneTMILo99KNxQ"
           fi
 
-          echo "Enviando ping para o Supabase..."
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X GET "https://fubrfqotdmehklbmeutn.supabase.co/rest/v1/business_settings?select=id&limit=1" \
+          echo "1. Enviando ping para o serviço de Autenticação (GoTrue)..."
+          AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET "https://fubrfqotdmehklbmeutn.supabase.co/auth/v1/health" \
+            -H "apikey: $ANON_KEY")
+          echo "Status Auth Health: $AUTH_STATUS"
+
+          echo "2. Enviando ping para o PostgREST / Banco de Dados..."
+          REST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "https://fubrfqotdmehklbmeutn.supabase.co/rest/v1/rpc/keep_alive" \
             -H "apikey: $ANON_KEY" \
             -H "Authorization: Bearer $ANON_KEY" \
             -H "Content-Type: application/json")
+          echo "Status RPC Keep-Alive: $REST_STATUS"
 
-          echo "Resposta HTTP: $HTTP_STATUS"
-
-          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
-            echo "✅ Supabase pingado com sucesso! Projeto permanece ativo."
+          if [ "$AUTH_STATUS" -eq 200 ] || [ "$REST_STATUS" -ge 200 -a "$REST_STATUS" -lt 400 ]; then
+            echo "✅ Ping de atividade registrado com sucesso no Supabase! Projeto ativo e protegido contra pausa."
           else
-            echo "⚠️ Aviso: Resposta HTTP $HTTP_STATUS recebida do Supabase."
+            echo "⚠️ Aviso: Respostas HTTP (Auth: $AUTH_STATUS, Rest: $REST_STATUS)."
           fi

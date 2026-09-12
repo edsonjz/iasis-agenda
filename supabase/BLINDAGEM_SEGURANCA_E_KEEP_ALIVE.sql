@@ -227,5 +227,23 @@ EXCEPTION
     RAISE NOTICE 'pg_cron requer ativação no painel Database -> Extensions ou já está em uso.';
 END $$;
 
+-- ------------------------------------------------------------------------------
+-- 10. FUNÇÃO RPC KEEP-ALIVE (Permite ping leve externo sem expor dados)
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.keep_alive()
+RETURNS json
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT json_build_object(
+    'status', 'online',
+    'app', 'IASIS AGENDA',
+    'timestamp', now()
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.keep_alive() TO anon, authenticated;
+
 -- Notificação de Conclusão
 SELECT '✅ Blindagem RLS, permissões RBAC e Keep-Alive aplicados com sucesso!' AS resultado;
