@@ -45,6 +45,29 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+// Admin Only Route Guard
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="w-8 h-8 rounded-full border-2 border-rose-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/agenda" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 export function App() {
   return (
     <ThemeProvider>
@@ -73,15 +96,15 @@ export function App() {
                   <Route path="servicos" element={<Servicos />} />
                   <Route path="anamnese" element={<Anamnese />} />
                   <Route path="produtos" element={<Produtos />} />
-                  <Route path="financeiro" element={<Financeiro />} />
-                  <Route path="caixa" element={<Caixa />} />
-                  <Route path="comissoes" element={<Comissoes />} />
+                  <Route path="financeiro" element={<AdminRoute><Financeiro /></AdminRoute>} />
+                  <Route path="caixa" element={<AdminRoute><Caixa /></AdminRoute>} />
+                  <Route path="comissoes" element={<AdminRoute><Comissoes /></AdminRoute>} />
                   <Route path="pacotes" element={<Pacotes />} />
                   <Route path="promocoes" element={<Promocoes />} />
                   <Route path="fidelizacao" element={<Fidelizacao />} />
-                  <Route path="relatorios" element={<Relatorios />} />
+                  <Route path="relatorios" element={<AdminRoute><Relatorios /></AdminRoute>} />
                   <Route path="lembretes" element={<Lembretes />} />
-                  <Route path="configuracoes" element={<Configuracoes />} />
+                  <Route path="configuracoes" element={<AdminRoute><Configuracoes /></AdminRoute>} />
                 </Route>
 
                 {/* Fallback */}

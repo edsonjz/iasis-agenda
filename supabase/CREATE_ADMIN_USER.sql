@@ -1,7 +1,8 @@
 -- ==============================================================================
 -- 🌸 IASIS AGENDA - CRIAÇÃO DO USUÁRIO ADMINISTRADOR (100% COMPATÍVEL)
 -- Email: studiojaquesouza@gmail.com
--- Senha Inicial: Agenda@2026
+-- Email: studiojaquesouza@gmail.com
+-- Defina a senha desejada substituindo [DEFINA_SUA_SENHA_FORTE_AQUI] abaixo
 -- ==============================================================================
 
 -- 1. Remove registro anterior se houver para evitar conflitos de constraint
@@ -26,7 +27,7 @@ INSERT INTO auth.users (
   'authenticated',
   'authenticated',
   'studiojaquesouza@gmail.com',
-  crypt('Agenda@2026', gen_salt('bf')),
+  crypt('[DEFINA_SUA_SENHA_FORTE_AQUI]', gen_salt('bf')),
   NOW(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Jaque Souza"}'::jsonb,

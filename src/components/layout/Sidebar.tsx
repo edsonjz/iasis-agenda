@@ -45,6 +45,7 @@ const navigationGroups = [
   },
   {
     title: 'Financeiro & Caixa',
+    adminOnly: true,
     items: [
       { name: 'Financeiro', to: '/financeiro', icon: DollarSign },
       { name: 'Caixa da Recepção', to: '/caixa', icon: Wallet },
@@ -57,14 +58,22 @@ const navigationGroups = [
       { name: 'Promoções & Cupons', to: '/promocoes', icon: Tag },
       { name: 'Fidelidade & Cashback', to: '/fidelizacao', icon: Award },
       { name: 'Lembretes WhatsApp', to: '/lembretes', icon: MessageSquare },
-      { name: 'Relatórios DRE', to: '/relatorios', icon: BarChart3 },
-      { name: 'Configurações', to: '/configuracoes', icon: Settings },
+      { name: 'Relatórios DRE', to: '/relatorios', icon: BarChart3, adminOnly: true },
+      { name: 'Configurações', to: '/configuracoes', icon: Settings, adminOnly: true },
     ],
   },
 ];
 
 export const Sidebar: React.FC = () => {
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
+
+  const filteredGroups = navigationGroups
+    .filter(g => !g.adminOnly || isAdmin)
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => !('adminOnly' in item) || !item.adminOnly || isAdmin),
+    }))
+    .filter(g => g.items.length > 0);
 
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 select-none">
@@ -85,7 +94,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation Links Grouped */}
       <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
-        {navigationGroups.map(group => (
+        {filteredGroups.map(group => (
           <div key={group.title} className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3.5 block mb-1">
               {group.title}

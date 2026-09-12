@@ -26,24 +26,26 @@ interface MobileMenuDrawerProps {
 }
 
 export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ isOpen, onClose }) => {
-  const { logout, profile } = useAuth();
+  const { logout, profile, isAdmin } = useAuth();
 
-  const links = [
+  const allLinks = [
     { name: 'CRM & Retenção', to: '/crm', icon: Users },
     { name: 'Fichas de Anamnese', to: '/anamnese', icon: FileText },
     { name: 'Pacotes de Procedimentos', to: '/pacotes', icon: Layers },
-    { name: 'Gestão Financeira', to: '/financeiro', icon: DollarSign },
-    { name: 'Caixa da Recepção', to: '/caixa', icon: Wallet },
-    { name: 'Comissões da Equipe', to: '/comissoes', icon: Percent },
+    { name: 'Gestão Financeira', to: '/financeiro', icon: DollarSign, adminOnly: true },
+    { name: 'Caixa da Recepção', to: '/caixa', icon: Wallet, adminOnly: true },
+    { name: 'Comissões da Equipe', to: '/comissoes', icon: Percent, adminOnly: true },
     { name: 'Promoções & Cupons', to: '/promocoes', icon: Tag },
     { name: 'Fidelidade & Cashback', to: '/fidelizacao', icon: Award },
     { name: 'Produtos & Estoque', to: '/produtos', icon: Package },
     { name: 'Profissionais & Equipe', to: '/profissionais', icon: UserCheck },
     { name: 'Serviços & Procedimentos', to: '/servicos', icon: Sparkles },
     { name: 'Lembretes WhatsApp', to: '/lembretes', icon: MessageSquare },
-    { name: 'Relatórios DRE & Indicadores', to: '/relatorios', icon: BarChart3 },
-    { name: 'Configurações da Estética', to: '/configuracoes', icon: Settings },
+    { name: 'Relatórios DRE & Indicadores', to: '/relatorios', icon: BarChart3, adminOnly: true },
+    { name: 'Configurações da Estética', to: '/configuracoes', icon: Settings, adminOnly: true },
   ];
+
+  const links = allLinks.filter(l => !l.adminOnly || isAdmin);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidth="sm">

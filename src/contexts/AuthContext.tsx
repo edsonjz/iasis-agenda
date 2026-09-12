@@ -126,12 +126,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profileData) {
           setProfile(profileData);
         } else {
-          // Create profile for legitimately registered user
+          // Create profile for legitimately registered user with principle of least privilege
+          const isOwnerAdmin = cleanEmail === 'studiojaquesouza@gmail.com';
           const newProf: Profile = {
             id: data.user.id,
-            role: 'admin',
-            full_name: data.user.user_metadata?.full_name || 'Administrador',
-            display_name: data.user.user_metadata?.full_name || 'Admin',
+            role: isOwnerAdmin ? 'admin' : 'professional',
+            full_name: data.user.user_metadata?.full_name || (isOwnerAdmin ? 'Jaque Souza' : 'Profissional'),
+            display_name: data.user.user_metadata?.full_name || (isOwnerAdmin ? 'Jaque Souza' : 'Profissional'),
             active: true,
             created_at: new Date().toISOString(),
           };
@@ -168,10 +169,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateProfile = async (data: Partial<Profile>) => {
     if (!profile) return;
-    const updated = { ...profile, ...data };
+    // Impede alteração de privilégio da própria role via cliente
+    const { role: _role, ...safeData } = data;
+    const updated = { ...profile, ...safeData };
     setProfile(updated);
     if (isSupabaseConfigured && supabase) {
-      await supabase.from('profiles').update(data).eq('id', profile.id);
+      await supabase.from('profiles').update(safeData).eq('id', profile.id);
     }
   };
 

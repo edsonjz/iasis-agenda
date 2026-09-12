@@ -64,7 +64,7 @@ INSERT INTO auth.users (
   'authenticated',
   'authenticated',
   'studiojaquesouza@gmail.com',
-  crypt('Agenda@2026', gen_salt('bf')),
+  crypt('[DEFINA_SUA_SENHA_FORTE_AQUI]', gen_salt('bf')),
   NOW(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Jaque Souza"}'::jsonb,
