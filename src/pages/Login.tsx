@@ -6,6 +6,7 @@ import { Input } from '@/components/common/Input';
 import { Card } from '@/components/common/Card';
 import { useNavigate } from 'react-router-dom';
 import { CalendarCheck2, Lock, Mail, Sparkles, ShieldCheck } from 'lucide-react';
+import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -55,7 +56,7 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-slate-100">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4 pt-safe pb-safe bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-slate-100">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
@@ -116,6 +117,8 @@ export const Login: React.FC = () => {
           <span>Ambiente Seguro • Conexão Criptografada</span>
         </div>
       </div>
+
+      <PWAInstallBanner />
     </div>
   );
 };

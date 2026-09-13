@@ -6,6 +6,7 @@ import { MobileNav } from './MobileNav';
 import { MobileMenuDrawer } from './MobileMenuDrawer';
 import { SearchModal } from '../common/SearchModal';
 import { AppointmentModal } from '../agenda/AppointmentModal';
+import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
 
 export const Layout: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -47,7 +48,7 @@ export const Layout: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
       {/* Desktop Sidebar */}
       <Sidebar />
 
@@ -84,6 +85,9 @@ export const Layout: React.FC = () => {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
       />
+
+      {/* PWA Installation and Updates Notification */}
+      <PWAInstallBanner />
     </div>
   );
 };
